@@ -1,0 +1,32 @@
+{	Path2Set : C:\Users\User_Name\AppData\Roaming\Sublime Text\Packages\User
+
+              /* Select_Diff-Variants : Cnt Sft B */
+  "variants":
+  [
+    {
+      "name": "Internal  CPP", "shell": true,
+      "selector": "source.c || source.c++ || source.cpp",
+      "shell_cmd": "cmd /c \"if not exist #inp.txt echo > #inp.txt\" && g++.exe -ansi -g3 -Wall -std=c++20 \"$file\" -o \"$file_base_name\" && $file_base_name < #inp.txt > #out.txt ",
+    },
+    {
+      "name": "External  CPP", "shell": true,
+      "selector": "source.c || source.c++ || source.cpp",
+      "shell_cmd" : " g++.exe -ansi -g3 -Wall -std=c++20 \"$file\" -o $file_base_name && start cmd.exe /k $file_base_name &echo. &echo. &pause ",
+    },
+
+
+    {
+      "name":"External  Python3",  "shell": true,
+      "shell_cmd": "start cmd /k python3 -u \"$file\"",
+      "env": { "PYTHONIOENCODING": "utf-8" },
+      "selector": "source.python || source.py",
+    },
+
+
+    {
+      "name":"External  Java",
+      "selector": "source.java","shell": true,
+      "shell_cmd" : " javac.exe -g \"$file_name\" && start cmd.exe /k java $file_base_name"
+    },
+  ]
+}
