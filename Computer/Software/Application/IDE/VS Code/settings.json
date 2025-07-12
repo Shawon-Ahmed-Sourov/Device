@@ -1,0 +1,63 @@
+{
+    "files.autoSave": "afterDelay",
+    "editor.fontSize": 17,
+    "terminal.integrated.fontSize": 17,
+    "editor.minimap.enabled": false,
+    "terminal.integrated.suggest.enabled": true, //// AutoSuggests in our Terminal
+
+    
+    "code-runner.clearPreviousOutput": true,
+    "code-runner.saveFileBeforeRun": true,
+    "code-runner.runInTerminal": true,
+    "code-runner.executorMap": {
+
+        "bat": "cmd /c",
+        "shellscript": "bash",
+        "powershell": "powershell -ExecutionPolicy ByPass -File",
+
+        "dart": "dart",
+        "swift": "swift",
+        "java": "cd $dir && javac $fileName && java $fileNameWithoutExt",
+
+        "go": "go run",
+        
+        "fsharp": "fsi",
+        
+        "c": "cd $dir && gcc $fileName -o $fileNameWithoutExt && clear && $dir$fileNameWithoutExt",
+        "cpp": "cd $dir && g++ $fileName -o $fileNameWithoutExt && clear && $dir$fileNameWithoutExt",
+        "objective-c": "cd $dir && gcc -framework Cocoa $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+        
+        "r": "Rscript",
+        "csharp": "scriptcs",
+        "javascript": "node",
+        "typescript": "ts-node",
+        "coffeescript": "coffee",
+        "applescript": "osascript",
+        "lisp": "sbcl --script",
+        "vbscript": "cscript //Nologo",
+        "python": "clear && python3 -u",
+
+        "php": "php",   "perl": "perl",    "perl6": "perl6",    "ruby": "ruby",
+
+        "d": "cd $dir && dmd $fileName && $dir$fileNameWithoutExt",
+        "rust": "cd $dir && rustc $fileName && $dir$fileNameWithoutExt", 
+        "pascal": "cd $dir && fpc $fileName && $dir$fileNameWithoutExt",
+        "haxe": "haxe --cwd $dirWithoutTrailingSlash --run $fileNameWithoutExt",
+
+        "sass": "sass --style expanded",
+        "scss": "scss --style expanded",
+        "less": "cd $dir && lessc $fileName $fileNameWithoutExt.css",
+
+        "fortran": "cd $dir && gfortran $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+        "fortran-modern": "cd $dir && gfortran $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+        "FortranFreeForm": "cd $dir && gfortran $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+        "fortran_fixed-form": "cd $dir && gfortran $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt",
+    },
+
+
+    "C_Cpp.autocompleteAddParentheses": true,
+    "C_Cpp.default.compilerPath": "C:\\Program Files (x86)\\GCC_14_GDB_15\\bin\\g++.exe",
+    "C_Cpp.default.cStandard": "c17",
+    "C_Cpp.default.cppStandard": "c++20",
+
+}
