@@ -1,0 +1,65 @@
+Shortcuts : 
+  Command Pallet : cnt sft p
+
+------Set it Up for C/C++ :
+
+
+Check Download Install : GCC,GDB  Compiler( TDM)
+
+Download Install : VS code User Version
+
+
+OpenVSCode :
+	Open Folder : Select ur Base Folder
+	[File] : Assure Mark Auto Save
+
+
+[ Extension Tab] :
+*Install Extention from net/ intall downloaded .vsix
+
+	1 Install : Code Runner
+	2 Install : MS C/C++ Extention Pack
+
+
+> Restart_Open VS Code
+> Setting [ USER ] (not workspace) :
+
+    "files.autoSave": "afterDelay",
+    "editor.fontSize": 17,
+    "terminal.integrated.fontSize": 17,
+    "editor.minimap.enabled": false,
+    "terminal.integrated.suggest.enabled": true, // AutoSuggests in our Terminal
+
+
+
+	Code Runer :
+		ClearPrevOutP,
+		SaveFile_B4run,
+		RunInTerm,
+
+		XCMap:
+		> C/C++ :[ && clear ] B4 $DirFilename
+		> Python: put B4 python
+
+	CppExtConfg : 
+		Markup : AutoParenthese,
+		Set : CompilerPath,
+		Language_STD : c17, cpp20
+
+
+>Run C/C++ :
+
+ Modify task.json :
+
+		label : C/C++ Building by g++.exe
+		args : -g3, -Walls
+
+
+ Debugg C/C++ :
+
+	*OR* ManuallyCreate launch.json : win LAUNCH
+
+		Name : C/C++ Debbugger
+		program : Task.json args- dirPath Paste
+		miDebuggerPath : set Path+gdb.exe
+		preLaunckTask : Task.json label-value
