@@ -1,0 +1,29 @@
+-----Login to Github Account-----
+
+# Dashboard Appeared
+  > LeftSide : See Created Repository  [ File Section ]  
+               OR  Create A Repository [ Treat As : A Directory/ Project /Class ]
+
+
+# Delete Repository? :
+  > Select/Access Repository[ while Login ]
+  > Setting Tab
+  > Scroll Down
+  > Danzer Zone
+  > Delete
+
+
+# Create A Directory / Folder, Under A Repository? :
+  > Select/Access Repository[ while Login ]
+  > Add File
+  > write( Correct Dirtory_Name )
+  > put  '/'  After Correct Dir_Name
+  > Commit Change
+
+
+# Delete A Directory / Folder, Under A Repository? :
+  > Select/Access Repository[ while Login ]
+  > Select/Access Directory 
+  > 3 Dots & Scroll
+  > Choose ' Delte Directory '
+  > Commit Change
