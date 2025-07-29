@@ -1,5 +1,6 @@
 Shortcuts : 
-  Command Pallet : cnt sft p
+  > Command Pallet : cnt sft p
+
 
 ------Set it Up for C/C++ :
 
@@ -8,18 +9,15 @@ Check Download Install : GCC,GDB  Compiler( TDM)
 
 Download Install : VS code User Version
 
-
 OpenVSCode :
 	[File] : Assure Mark Auto Save
 	Open Folder : Select ur Base Folder
 
 
+[ Extension Tab] : * Install Extention from net/ intall downloaded*.vsix
 
-[ Extension Tab] :
-*Install Extention from net/ intall downloaded .vsix
-
-	1 Install : Code Runner
-	2 Install : MS C/C++ Extention Pack
+		1 Install : Code Runner
+		2 Install : MS C/C++ Extention Pack
 
 
 > Restart_Open VS Code
