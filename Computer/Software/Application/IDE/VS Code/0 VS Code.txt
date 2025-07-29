@@ -10,8 +10,9 @@ Download Install : VS code User Version
 
 
 OpenVSCode :
-	Open Folder : Select ur Base Folder
 	[File] : Assure Mark Auto Save
+	Open Folder : Select ur Base Folder
+
 
 
 [ Extension Tab] :
@@ -22,14 +23,14 @@ OpenVSCode :
 
 
 > Restart_Open VS Code
-> Setting [ USER ] (not workspace) :
-
+> Setting [ USER ] (not workspace) : (The Setting JSON )
+{
     "files.autoSave": "afterDelay",
     "editor.fontSize": 17,
     "terminal.integrated.fontSize": 17,
     "editor.minimap.enabled": false,
     "terminal.integrated.suggest.enabled": true, // AutoSuggests in our Terminal
-
+}
 
 
 	Code Runer :
