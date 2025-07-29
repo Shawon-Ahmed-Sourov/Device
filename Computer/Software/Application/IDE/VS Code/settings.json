@@ -55,8 +55,8 @@
     },
 
 
-    "C_Cpp.autocompleteAddParentheses": true,
     "C_Cpp.default.compilerPath": "C:\\Program Files (x86)\\GCC_14_GDB_15\\bin\\g++.exe",
+    "C_Cpp.autocompleteAddParentheses": true,
     "C_Cpp.default.cStandard": "c17",
     "C_Cpp.default.cppStandard": "c++20",
 
