@@ -1,17 +1,18 @@
 {  //Path2Set : C:\Users\User_Name\AppData\Roaming\Sublime Text\Packages\User
 
-              /* Select_Diff-Variants : Cnt Sft B */
+  /* Select_Diff-Variants : Cnt Sft B */
+  
   "variants":
   [
     {
       "name": "Internal  CPP", "shell": true,
       "selector": "source.c || source.c++ || source.cpp",
-      "shell_cmd": "cmd /c \"if not exist #inp.txt echo > #inp.txt\" && g++.exe -ansi -g3 -Wall -std=c++20 \"$file\" -o \"$file_base_name\" && $file_base_name < #inp.txt > #out.txt ",
+      "shell_cmd": "cmd /c \"if not exist #inp.txt echo > #inp.txt\" && g++.exe -Og -Wall -std=c++20 \"$file\" -o \"$file_base_name\" && $file_base_name < #inp.txt > #out.txt ",
     },
     {
       "name": "External  CPP", "shell": true,
       "selector": "source.c || source.c++ || source.cpp",
-      "shell_cmd" : " g++.exe -ansi -g3 -Wall -std=c++20 \"$file\" -o $file_base_name && start cmd.exe /k $file_base_name &echo. &echo. &pause ",
+      "shell_cmd" : " g++.exe -Og -Wall -std=c++20 \"$file\" -o $file_base_name && start cmd.exe /k $file_base_name &echo. &echo. &pause ",
     },
 
 
