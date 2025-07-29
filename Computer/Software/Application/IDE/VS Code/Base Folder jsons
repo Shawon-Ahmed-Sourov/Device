@@ -8,7 +8,7 @@ tasks.json
             "command": "C:\\Program Files (x86)\\GCC_14_GDB_15\\bin\\g++.exe",
             "args": [
                 "-fdiagnostics-color=always",
-                "-g3",    "-Wall",    "${file}",    "-o",
+                "-Og", "-g3", "-pipe",   "-Wall",    "${file}",    "-o",
                 "${fileDirname}\\${fileBasenameNoExtension}.exe"
             ],
             "options": {    "cwd": "${fileDirname}"    },
@@ -41,7 +41,8 @@ launch.json
 
       "externalConsole": false, //true for CMD
       "MIMode": "gdb",
-      "miDebuggerPath": "c:\\Program Files (x86)\\GCC_14_GDB_15\\bin\\gdb.exe", //*Select Debbugger.exe
+
+      "miDebuggerPath": " c:\\Program Files (x86)\\GCC_14_GDB_15\\bin\\gdb.exe ", //*Select Debbugger.exe
       "preLaunchTask": "C/C++ Building by g++.exe" //* Task.Json[ label-value]
     }
   ]
