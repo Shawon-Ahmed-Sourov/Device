@@ -24,43 +24,26 @@ OpenVSCode :
 
 > Restart_Open VS Code
 > Setting [ USER ] (not workspace) : (The Setting JSON )
+
 {
     "files.autoSave": "afterDelay",
     "editor.fontSize": 17,
     "terminal.integrated.fontSize": 17,
     "editor.minimap.enabled": false,
     "terminal.integrated.suggest.enabled": true, // AutoSuggests in our Terminal
+
+// Copy-Paste The provided setting.jsom
+// Also May change from  each-Extenson-setting
 }
-
-
-	Code Runer :
-		ClearPrevOutP,
-		SaveFile_B4run,
-		RunInTerm,
-
-		XCMap:
-		> C/C++ :[ && clear ] B4 $DirFilename
-		> Python: put B4 python
-
-	CppExtConfg : 
-		Markup : AutoParenthese,
-		Set : CompilerPath,
-		Language_STD : c17, cpp20
 
 
 >Run C/C++ :
 
- Modify task.json :
+	task.json has been created : OR CopyPasteProvided  OR-Self.Modify( -Og -g3 -pipe)
 
-		label : C/C++ Building by g++.exe
-		args : -Og, -g3, -pipe, -Walls
-
-
- Debugg C/C++ :
-
-	*OR* ManuallyCreate launch.json : win LAUNCH
+	Debuggr-Tab Debug C/C++ : launch.json Created ( manually : win LAUNCH )
 
 		Name : C/C++ Debbugger
 		program : Task.json args- dirPath Paste
-		miDebuggerPath : set Path+gdb.exe
-		preLaunckTask : Task.json label-value
+		miDebuggerPath : set * Path+gdb.exe
+		preLaunckTask : Task.json  * label-value
