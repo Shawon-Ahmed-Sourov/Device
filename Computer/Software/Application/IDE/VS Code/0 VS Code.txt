@@ -52,7 +52,7 @@ OpenVSCode :
  Modify task.json :
 
 		label : C/C++ Building by g++.exe
-		args : -g3, -Walls
+		args : -Og, -g3, -pipe, -Walls
 
 
  Debugg C/C++ :
