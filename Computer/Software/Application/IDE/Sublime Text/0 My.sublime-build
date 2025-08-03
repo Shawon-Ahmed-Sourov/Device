@@ -1,35 +1,46 @@
-{  //Path2Set : C:\Users\User_Name\AppData\Roaming\Sublime Text\Packages\User
+{	//Path2Set : C:\Users\User_Name\AppData\Roaming\Sublime Text\Packages\User
 
   // [View] : Layout-3 > Group-2
- 
-  /* Select_Diff-Variants : Cnt Sft B */
-  
+              /* Select_Diff-Variants : Cnt Sft B */
   "variants":
   [
     {
+      "name": "Internal Python",
+      "selector": "source.python",
+      "shell": true,
+      "shell_cmd": "cmd /c \"if not exist #-Inp.txt echo. > #-Inp.txt\" && python \"$file\" < #-Inp.txt > #-Out.txt"
+    },
+      {
+        "name":"External  Python3",  "shell": true,
+        "shell_cmd": "start cmd /k python3 -u \"$file\"",
+        "env": { "PYTHONIOENCODING": "utf-8" },
+        "selector": "source.python || source.py",
+      },
+
+
+    {
       "name": "Internal  CPP", "shell": true,
       "selector": "source.c || source.c++ || source.cpp",
-      "shell_cmd": "cmd /c \"if not exist #inp.txt echo > #inp.txt\" && g++.exe -Og -g3 -pipe -Wall -std=c++20 \"$file\" -o \"$file_base_name\" && $file_base_name < #inp.txt > #out.txt "
+      "shell_cmd": "cmd /c \"if not exist #-Inp.txt echo 0 > #-Inp.txt\" && g++.exe -Og -g3 -pipe -Wall -std=c++20 \"$file\" -o \"$file_base_name\" && $file_base_name < #-Inp.txt > #-Out.txt "
     },
-    {
-      "name": "External  CPP", "shell": true,
-      "selector": "source.c || source.c++ || source.cpp",
-      "shell_cmd" : " g++.exe -Og -g3 -pipe -Wall -std=c++20 \"$file\" -o $file_base_name && start cmd.exe /k $file_base_name &echo. &echo. &pause ",
-    },
+      {
+    
+        "name": "External  CPP", "shell": true,
+        "selector": "source.c || source.c++ || source.cpp",
+        "shell_cmd" : " g++.exe -Og -g3 -pipe -Wall -std=c++20 \"$file\" -o $file_base_name && start cmd.exe /k $file_base_name &echo. &echo. &pause ",
+      },
 
 
     {
-      "name":"External  Python3",  "shell": true,
-      "shell_cmd": "start cmd /k python3 -u \"$file\"",
-      "env": { "PYTHONIOENCODING": "utf-8" },
-      "selector": "source.python || source.py",
+    "name": "Internal Java",
+    "selector": "source.java",
+    "shell": true,
+    "shell_cmd": "cmd /c \"if not exist #-Inp.txt echo. > #-Inp.txt\" && javac \"$file\" && java \"$file_base_name\" < #-Inp.txt > #-Out.txt"
     },
-
-
-    {
-      "name":"External  Java",
-      "selector": "source.java","shell": true,
-      "shell_cmd" : " javac.exe -g \"$file_name\" && start cmd.exe /k java $file_base_name"
-    },
+      {
+        "name":"External  Java",
+        "selector": "source.java","shell": true,
+        "shell_cmd" : " javac.exe -g \"$file_name\" && start cmd.exe /k java $file_base_name"
+      },
   ]
 }
