@@ -1,46 +1,53 @@
-{	//Path2Set : C:\Users\User_Name\AppData\Roaming\Sublime Text\Packages\User
+//Path2Set : C:\Users\User_Name\AppData\Roaming\Sublime Text\Packages\User
 
-  // [View] : Layout-3 > Group-2
-              /* Select_Diff-Variants : Cnt Sft B */
+// Tools > BuildSys : 0 My.sublime-build
+/* Select_Diff-Variants : Cnt Sft B */
+
+// Internal : Looping Program
+// External : Totally Tested Internal, not causing out.txt2Get-Large
+{
   "variants":
   [
     {
-      "name": "Internal Python",
-      "selector": "source.python",
-      "shell": true,
-      "shell_cmd": "cmd /c \"if not exist #-Inp.txt echo. > #-Inp.txt\" && python \"$file\" < #-Inp.txt > #-Out.txt"
+      "name": "C/C++ - External",
+      "shell": true, "selector": "source.c || source.c++ || source.cpp",
+      "shell_cmd" : " g++.exe -Og -g3 -pipe -Wall -std=c++20 \"$file\" -o $file_base_name && start cmd.exe /k $file_base_name &echo. &echo. &pause ",
+      "file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$"
     },
-      {
-        "name":"External  Python3",  "shell": true,
-        "shell_cmd": "start cmd /k python3 -u \"$file\"",
-        "env": { "PYTHONIOENCODING": "utf-8" },
-        "selector": "source.python || source.py",
-      },
-
+     {
+      "name": "C/C++ - Internal",
+      "shell": true, "selector": "source.c || source.c++ || source.cpp",
+      "shell_cmd": "cmd /c \"if not exist #-Inp.txt echo 0 > #-Inp.txt\" && g++.exe -Og -g3 -pipe -Wall -std=c++20 \"$file\" -o \"$file_base_name\" && $file_base_name < #-Inp.txt > #-Out.txt",
+      "file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$"
+     },
 
     {
-      "name": "Internal  CPP", "shell": true,
-      "selector": "source.c || source.c++ || source.cpp",
-      "shell_cmd": "cmd /c \"if not exist #-Inp.txt echo 0 > #-Inp.txt\" && g++.exe -Og -g3 -pipe -Wall -std=c++20 \"$file\" -o \"$file_base_name\" && $file_base_name < #-Inp.txt > #-Out.txt "
+      "name":"Python3 - External",
+      "selector": "source.python || source.py", "shell": true,
+      "shell_cmd": "start cmd /k python3 -u \"$file\"",
+      "env": { "PYTHONIOENCODING": "utf-8" },
+      "file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$"
     },
-      {
-    
-        "name": "External  CPP", "shell": true,
-        "selector": "source.c || source.c++ || source.cpp",
-        "shell_cmd" : " g++.exe -Og -g3 -pipe -Wall -std=c++20 \"$file\" -o $file_base_name && start cmd.exe /k $file_base_name &echo. &echo. &pause ",
+     {
+      "name": "Python3 - Internal",
+      "selector": "source.python", "shell": true,
+      "shell_cmd": "cmd /c \"if not exist #-Inp.txt echo. > #-Inp.txt\" && python \"$file\" < #-Inp.txt > #-Out.txt",
+      "file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$"
       },
-
+      
 
     {
-    "name": "Internal Java",
-    "selector": "source.java",
-    "shell": true,
-    "shell_cmd": "cmd /c \"if not exist #-Inp.txt echo. > #-Inp.txt\" && javac \"$file\" && java \"$file_base_name\" < #-Inp.txt > #-Out.txt"
+      "name":"Java - External",
+      "selector": "source.java","shell": true,
+      "shell_cmd" : " javac.exe -g \"$file_name\" && start cmd.exe /k java $file_base_name",
+      "file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$"
     },
-      {
-        "name":"External  Java",
-        "selector": "source.java","shell": true,
-        "shell_cmd" : " javac.exe -g \"$file_name\" && start cmd.exe /k java $file_base_name"
-      },
+     {
+      "name": "Java - Internal",
+      "shell":true, "selector": "source.java",
+      "shell_cmd": "cmd /c \"if not exist #-Inp.txt echo. > #-Inp.txt\" && javac \"$file\" && java \"$file_base_name\" < #-Inp.txt > #-Out.txt",
+      "file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$"
+     },
+     
   ]
 }
