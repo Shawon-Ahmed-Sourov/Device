@@ -35,7 +35,6 @@
       "file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$"
       },
       
-
     {
       "name":"Java - External",
       "selector": "source.java","shell": true,
@@ -48,6 +47,6 @@
       "shell_cmd": "cmd /c \"if not exist #-Inp.txt echo. > #-Inp.txt\" && javac \"$file\" && java \"$file_base_name\" < #-Inp.txt > #-Out.txt",
       "file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$"
      },
-     
+
   ]
 }
