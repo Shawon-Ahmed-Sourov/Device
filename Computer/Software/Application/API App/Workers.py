@@ -22,7 +22,7 @@ class Prefix(QThread):
         overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
         merged_dir = os.path.join(overlay_dir, "merged")
 
-        if not os.path.exists(overlay_dir):    self.log.emit("\nℹ️ No Temp Prefix found."); return
+        if not os.path.exists(overlay_dir):    self.log.emit("ℹ️ No Temp Prefix found."); return
 
         try:
             # Check if the overlay is mounted
@@ -31,17 +31,17 @@ class Prefix(QThread):
             else:    self.log.emit(f"\nℹ️ {merged_dir} is not mounted."); return
 
             # Unmount the overlay if it's mounted
-            self.log.emit(f"Unmounting : {merged_dir} \nDeleting : {overlay_dir} ...")
+            self.log.emit(f"\nUnmounting : {merged_dir} \n------Deleting : {overlay_dir} ...")
             command = f'umount "{merged_dir}" && rm -rf "{overlay_dir}"'
 
             # Chain both commands: umount and rm -rf, using pkexec with bash -c
             result = subprocess.run ( ["pkexec", "bash", "-c", command], check=True, capture_output=True, text=True )
 
             self.log.emit( f"stdout: {result.stdout}" ); self.log.emit( f"stderr: {result.stderr}" )
-            self.log.emit( f"✅ Successfully unmounted and deleted.")
+            self.log.emit( f"✅ Successfully Unmounted and Deleted.\n")
 
-        except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Operation failed: {e}")
-        except Exception as e:    self.log.emit(f"❌ Unexpected error: {e}")
+        except subprocess.CalledProcessError as e:    self.log.emit(f"\n❌ Operation failed: {e}\n")
+        except Exception as e:    self.log.emit(f"\n❌ Unexpected error: {e}\n")
 
 
     def setup_temp_prefix(self):
@@ -61,22 +61,22 @@ class Prefix(QThread):
             lower_dir = self.bprefix_path
             upper_dir, work_dir, merged_dir = (os.path.join(overlay_dir, d) for d in ("upper", "work", "merged"))
 
-            self.log.emit(f"Overlay setup paths: lower={lower_dir}, upper={upper_dir}, work={work_dir}, merged={merged_dir}")
+            self.log.emit(f"\nOverlay setup paths: lower={lower_dir}, upper={upper_dir}, work={work_dir}, merged={merged_dir}")
 
             # Overlay mount command
             command = [ 'pkexec', 'mount', '-t', 'overlay', 'overlay', '-o',
                         f'lowerdir={lower_dir},upperdir={upper_dir},workdir={work_dir}', merged_dir ]
-            self.log.emit( f"Mounting : {' '.join(command)}" )
+            self.log.emit( f"\nMounting : {' '.join(command)}" )
 
-            subprocess.run(command, check=True); self.log.emit("Overlay mounted successfully.")
+            subprocess.run(command, check=True); self.log.emit("\n✅ Overlay mounted successfully.")
 
             # Check if the merged directory exists
             if not os.path.exists(merged_dir) or not os.path.isdir(merged_dir):
-                self.log.emit("❌ Overlay setup failed."); return None
+                self.log.emit("\n❌ Overlay setup failed."); return None
             return overlay_dir
 
-        except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Overlay setup failed: {e}"); self.log.emit(f"stderr: {e.stderr}")
-        except Exception as e:    self.log.emit(f"❌ Overlay setup failed: {e}")
+        except subprocess.CalledProcessError as e:    self.log.emit(f"\n❌ Overlay setup failed: {e}"); self.log.emit(f"stderr: {e.stderr}\n")
+        except Exception as e:    self.log.emit(f"\n❌ Overlay setup failed: {e}\n")
         return None
 
     def initialize_wine_prefix(self, overlay_dir):
@@ -92,8 +92,8 @@ class Prefix(QThread):
 
             self.log.emit("✅ Wine prefix initialized with Win10 successfully.")
             return True
-        except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Wine prefix initialization failed: {e}")
-        except Exception as e:    self.log.emit(f"❌ Wine prefix initialization failed: {e}")
+        except subprocess.CalledProcessError as e:    self.log.emit(f"\n❌ Wine prefix initialization failed: {e}")
+        except Exception as e:    self.log.emit(f"\n❌ Wine prefix initialization failed: {e}")
         return False
 
 
@@ -144,3 +144,5 @@ class Launch(QThread):
 
         except subprocess.TimeoutExpired:    self.log.emit("⏱️ Process timed out, killing."); proc.kill(); return None
         except Exception as e:    self.log.emit(f"❌ Launch failed: {e}"); return None
+
+
