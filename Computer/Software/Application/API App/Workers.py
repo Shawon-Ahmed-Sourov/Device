@@ -1,3 +1,4 @@
+
 import os, time, subprocess
 from PyQt5.QtCore import QThread, pyqtSignal
 
@@ -15,65 +16,6 @@ class Prefix(QThread):
     def run(self):
         if self.num == 3:    self.setup_temp_prefix()
         elif self.num == 4:    self.delet_temp_prefix()
-
-
-
-    def setup_temp_prefix(self):
-
-        overlay_dir = self.setup_native_overlay()
-
-        if not overlay_dir:    self.done.emit(False); return
-        if not self.initialize_wine_prefix(overlay_dir):    self.done.emit(False); return
-        self.done.emit(True)
-
-    def setup_native_overlay(self):
-        try:
-            overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
-            os.makedirs(overlay_dir, exist_ok=True)
-            for subdir in ("upper", "work", "merged"):    os.makedirs(os.path.join(overlay_dir, subdir), exist_ok=True)
-
-            lower_dir = self.bprefix_path
-            upper_dir, work_dir, merged_dir = (os.path.join(overlay_dir, d) for d in ("upper", "work", "merged"))
-
-            self.log.emit(f"Overlay setup paths: lower={lower_dir}, upper={upper_dir}, work={work_dir}, merged={merged_dir}")
-
-            # Overlay mount command
-            command = [
-                'pkexec', 'mount', '-t', 'overlay', 'overlay', '-o',
-                f'lowerdir={lower_dir},upperdir={upper_dir},workdir={work_dir}', merged_dir
-            ]
-            self.log.emit(f"Running mount command: {' '.join(command)}")
-
-            subprocess.run(command, check=True)
-            self.log.emit("Overlay mounted successfully.")
-
-            # Check if the merged directory exists
-            if not os.path.exists(merged_dir) or not os.path.isdir(merged_dir):
-                self.log.emit("❌ Overlay setup failed.")
-                return None
-
-            return overlay_dir
-
-        except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Overlay setup failed: {e}"); self.log.emit(f"stderr: {e.stderr}")
-        except Exception as e:    self.log.emit(f"❌ Overlay setup failed: {e}")
-        return None
-
-    def initialize_wine_prefix(self, overlay_dir):
-        try:
-            drive_c_dir = os.path.join(overlay_dir, "merged", "drive_c", "windows")
-            os.makedirs(drive_c_dir, exist_ok=True)
-
-            merged_dir = os.path.join(overlay_dir, "merged")
-            env = {**os.environ, "WINEPREFIX": merged_dir, "WINEDEBUG": "-all", "WINEARCH": "win64"}
-
-            subprocess.run([self.wine, "wineboot", "-u"], env=env, cwd=os.path.dirname(self.exe_path), check=True, capture_output=True)
-            subprocess.run([self.wine, "wine", "reg", "add", "HKCU\\Software\\Wine\\Wine\\Config", "/v", "Version", "/d", "10.0", "/f"], env=env)
-
-            self.log.emit("✅ Wine prefix initialized with Win10 successfully.")
-            return True
-        except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Wine prefix initialization failed: {e}")
-        except Exception as e:    self.log.emit(f"❌ Wine prefix initialization failed: {e}")
-        return False
 
 
     def delet_temp_prefix(self):
@@ -102,6 +44,58 @@ class Prefix(QThread):
         except Exception as e:    self.log.emit(f"❌ Unexpected error: {e}")
 
 
+    def setup_temp_prefix(self):
+
+        overlay_dir = self.setup_native_overlay()
+
+        if not overlay_dir:    self.done.emit(False); return
+        if not self.initialize_wine_prefix(overlay_dir):    self.done.emit(False); return
+        self.done.emit(True)
+
+    def setup_native_overlay(self):
+        try:
+            overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
+            os.makedirs(overlay_dir, exist_ok=True)
+            for subdir in ("upper", "work", "merged"):    os.makedirs(os.path.join(overlay_dir, subdir), exist_ok=True)
+
+            lower_dir = self.bprefix_path
+            upper_dir, work_dir, merged_dir = (os.path.join(overlay_dir, d) for d in ("upper", "work", "merged"))
+
+            self.log.emit(f"Overlay setup paths: lower={lower_dir}, upper={upper_dir}, work={work_dir}, merged={merged_dir}")
+
+            # Overlay mount command
+            command = [ 'pkexec', 'mount', '-t', 'overlay', 'overlay', '-o',
+                        f'lowerdir={lower_dir},upperdir={upper_dir},workdir={work_dir}', merged_dir ]
+            self.log.emit( f"Mounting : {' '.join(command)}" )
+
+            subprocess.run(command, check=True); self.log.emit("Overlay mounted successfully.")
+
+            # Check if the merged directory exists
+            if not os.path.exists(merged_dir) or not os.path.isdir(merged_dir):
+                self.log.emit("❌ Overlay setup failed."); return None
+            return overlay_dir
+
+        except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Overlay setup failed: {e}"); self.log.emit(f"stderr: {e.stderr}")
+        except Exception as e:    self.log.emit(f"❌ Overlay setup failed: {e}")
+        return None
+
+    def initialize_wine_prefix(self, overlay_dir):
+        try:
+            drive_c_dir = os.path.join(overlay_dir, "merged", "drive_c", "windows")
+            os.makedirs(drive_c_dir, exist_ok=True)
+
+            merged_dir = os.path.join(overlay_dir, "merged")
+            env = {**os.environ, "WINEPREFIX":merged_dir, "WINEUPDATE": "0", "WINEDLLOVERRIDES":"dll=ignore", "WINEDEBUG":"-all", "WINEARCH":"win64"}
+
+            # winecfg  initialize faster than [ wineboot -u ]
+            subprocess.run([self.wine, "winecfg", "&&", "wine", "reg", "add", "HKCU\\Software\\Wine\\Wine\\Config", "/v", "Version", "/d", "10.0", "/f"], env=env, cwd=os.path.dirname(self.exe_path), check=True)
+
+            self.log.emit("✅ Wine prefix initialized with Win10 successfully.")
+            return True
+        except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Wine prefix initialization failed: {e}")
+        except Exception as e:    self.log.emit(f"❌ Wine prefix initialization failed: {e}")
+        return False
+
 
 
 class Launch(QThread):
@@ -110,12 +104,9 @@ class Launch(QThread):
     def __init__(self, tprefix, stable_env, wine, exe_file, pref_res=None, nstable_env=None, mono_mod_env=None):
         super().__init__()
         self.tprefix = tprefix
-        self.stable_env = stable_env
-        self.wine = wine
-        self.exe = exe_file
-        self.pref_res = pref_res
-        self.nstable_env = nstable_env
-        self.mono_mod_env = mono_mod_env
+        self.pref_res = pref_res; self.nstable_env = nstable_env; self.stable_env = stable_env
+        self.wine = 'wine'; self.mono_mod_env = mono_mod_env; self.exe = exe_file
+        
 
     def run(self):
         cmd = self.build_command()
@@ -142,23 +133,14 @@ class Launch(QThread):
             proc = subprocess.Popen(
                 terminal_cmd,
                 cwd=os.path.dirname(self.exe),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                shell=True,
-                bufsize=1
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, shell=True, bufsize=1
             )
 
             stdout, stderr = proc.communicate(timeout=90)
             self.log.emit(stdout)
-            if stderr:
-                self.log.emit(f"⚠️ Error Output: {stderr}")
+            if stderr:    self.log.emit(f"⚠️ Error Output: {stderr}")
             return proc
 
-        except subprocess.TimeoutExpired:
-            self.log.emit("⏱️ Process timed out, killing.")
-            proc.kill()
-            return None
-        except Exception as e:
-            self.log.emit(f"❌ Launch failed: {e}")
-            return None
+        except subprocess.TimeoutExpired:    self.log.emit("⏱️ Process timed out, killing."); proc.kill(); return None
+        except Exception as e:    self.log.emit(f"❌ Launch failed: {e}"); return None
