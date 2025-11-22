@@ -2,7 +2,7 @@ import os
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QCheckBox, QLabel, QSpacerItem, QSizePolicy, QFrame, QTextEdit, QFileDialog
-from Workers1 import Prefix
+from Workers import Prefix
 
 from PyQt5.QtCore import QThread, pyqtSignal
 
