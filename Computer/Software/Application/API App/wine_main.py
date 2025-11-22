@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication
-from GUI1 import WineLauncher
+from GUI import WineLauncher
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
