@@ -22,23 +22,23 @@ class Prefix(QThread):
         overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
         merged_dir = os.path.join(overlay_dir, "merged")
 
-        if not os.path.exists(overlay_dir):    self.log.emit("ℹ️ No Temp Prefix found."); return
+        if not os.path.exists(overlay_dir):    self.log.emit("\nℹ️ No Temp Prefix found."); return
 
         try:
             # Check if the overlay is mounted
             result = subprocess.run(["mount"], check=True, capture_output=True, text=True)
-            if merged_dir in result.stdout:    self.log.emit(f"ℹ️ {merged_dir} is mounted.")
-            else:    self.log.emit(f"ℹ️ {merged_dir} is not mounted."); return
+            if merged_dir in result.stdout:    self.log.emit(f"\nℹ️ {merged_dir} is mounted.")
+            else:    self.log.emit(f"\nℹ️ {merged_dir} is not mounted."); return
 
             # Unmount the overlay if it's mounted
-            self.log.emit(f"Attempting to Unmount{merged_dir} and Delete {overlay_dir} ...")
+            self.log.emit(f"Unmounting : {merged_dir} \nDeleting : {overlay_dir} ...")
             command = f'umount "{merged_dir}" && rm -rf "{overlay_dir}"'
 
             # Chain both commands: umount and rm -rf, using pkexec with bash -c
             result = subprocess.run ( ["pkexec", "bash", "-c", command], check=True, capture_output=True, text=True )
 
             self.log.emit( f"stdout: {result.stdout}" ); self.log.emit( f"stderr: {result.stderr}" )
-            self.log.emit( f"✅ Successfully unmounted {merged_dir} and deleted {overlay_dir}.")
+            self.log.emit( f"✅ Successfully unmounted and deleted.")
 
         except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Operation failed: {e}")
         except Exception as e:    self.log.emit(f"❌ Unexpected error: {e}")
