@@ -153,7 +153,7 @@ class WineLauncher(QWidget):
         self.log.append(f"\n\nTemp Prefix option selected: {temp_action}")
 
         if temp_action == "Delete" :
-            self.log.append("Starting Wine Prefix Dreation...")
+            self.log.append("Starting Wine Prefix Deletion...")
             self.worker_thread = Prefix( num =4,    exe_path=self.exe_path )
             self.worker_thread.log.connect( self.log.append )
             self.worker_thread.done.connect( lambda success:
@@ -166,7 +166,7 @@ class WineLauncher(QWidget):
             self.worker_thread = Prefix( num =3, exe_path=self.exe_path, bprefix_path=self.bprefix_path )
             self.worker_thread.log.connect(self.log.append)
             self.worker_thread.done.connect( lambda success:
-                self.log.append( "✅ Wine prefix created successfully!" if success else "❌ Wine prefix creation failed."))
+                self.log.append( "✅ Wine prefix created successfully!\n" if success else "❌ Wine prefix creation failed.\n"))
             self.worker_thread.start()
             
         else : pass 
