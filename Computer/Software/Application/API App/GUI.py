@@ -150,7 +150,7 @@ class WineLauncher(QWidget):
 
     def on_modify_temp_changed(self, index):
         temp_action = self.modify_temp.itemText(index)
-        self.log.append(f"Temp Prefix option selected: {temp_action}")
+        self.log.append(f"\nTemp Prefix option selected: {temp_action}")
 
         if temp_action == "Delete" :
             self.log.append("Starting Wine Prefix Dreation...")
