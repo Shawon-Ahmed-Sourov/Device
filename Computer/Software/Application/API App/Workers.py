@@ -1,22 +1,21 @@
-
 import os, subprocess
 from PyQt5.QtCore import QThread, pyqtSignal
 
 class Prefix(QThread):
+
     log = pyqtSignal(str); done = pyqtSignal(bool)
 
     def __init__(self, num, exe_path=None, bprefix_path=None):
         super().__init__()
-        self.wine = 'wine'
         self.num = num
-        self.bprefix_path = bprefix_path
-        self.exe_path = exe_path
+        self.wine = 'wine'; self.exe_path = exe_path; self.bprefix_path = bprefix_path
 
     def run(self):
 
         if    self.num == 3:    self.create_temp_prefix()
         elif  self.num == 4:    self.delete_temp_prefix()
-        else: self.log.emit("❌ Invalid num value, unable to process."); self.done.emit(False)
+        else: self.log.emit("❌ No Prefix Action Taken."); self.done.emit(False)
+
 
     ### Temp Prefix Creation
     def create_temp_prefix(self):
@@ -60,6 +59,7 @@ class Prefix(QThread):
                 }
 
     def _initialize_wine_prefix(self, overlay_dir):
+
         merged_dir = os.path.join(overlay_dir, "merged")
         os.makedirs(os.path.join(merged_dir, "drive_c", "windows"), exist_ok=True)
 
@@ -74,9 +74,9 @@ class Prefix(QThread):
             for line in reg_result.stdout.splitlines():    self.log.emit(f"✅output_{line}")
             for line in reg_result.stderr.splitlines():    self.log.emit(f"❌error_{line}")
 
-            self.log.emit("✅ Wine prefix initialized with Win10 successfully.")
+            self.log.emit("✅ WPrefix initialized with Win10 successfully.")
             return True
-        except subprocess.CalledProcessError as e:  self.log.emit(f"❌ Wine prefix initialization failed: {e}"); return False
+        except subprocess.CalledProcessError as e:  self.log.emit(f"❌ WPrefix initialization failed: {e}"); return False
 
 
     ### Temp Prefix Deletion
@@ -98,5 +98,9 @@ class Prefix(QThread):
 
         self.log.emit(f"Unmounting: {merged_dir}\nDeleting: {overlay_dir}")
         command = f'umount "{merged_dir}" && rm -rf "{overlay_dir}"'
-        subprocess.run(["pkexec", "bash", "-c", command], check=True, capture_output=True, text=True)
-        self.log.emit("✅ Successfully Unmounted and Deleted.\n")
+        try:
+            result = subprocess.run(["pkexec", "bash", "-c", command], check=True, capture_output=True, text=True)
+            self.log.emit("✅ Successfully Unmounted and Deleted.\n")
+        except subprocess.CalledProcessError as e:
+            self.log.emit(f"❌ Deletion exit code {e.returncode}.")
+            self.log.emit(f"Error output: {e.stderr}")
