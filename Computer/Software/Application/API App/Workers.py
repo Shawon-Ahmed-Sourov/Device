@@ -15,9 +15,9 @@ class Prefix(QThread):
 
     def run(self):
 
-        if   self.num == 3:    self.create_temp_prefix()
-        elif self.num == 4:    self.delete_temp_prefix()
-
+        if    self.num == 3:    self.create_temp_prefix()
+        elif  self.num == 4:    self.delete_temp_prefix()
+        else: self.log.emit("❌ Invalid num value, unable to process."); self.done.emit(False)
 
     ### Temp Prefix Creation
     def create_temp_prefix(self):
