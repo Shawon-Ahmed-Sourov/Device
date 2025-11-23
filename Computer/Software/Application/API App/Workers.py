@@ -1,6 +1,5 @@
 
-import os
-import subprocess
+import os, subprocess
 from PyQt5.QtCore import QThread, pyqtSignal
 
 class Prefix(QThread):
@@ -23,7 +22,6 @@ class Prefix(QThread):
     def create_temp_prefix(self):
 
         overlay_dir = self._create_overlay()
-
         if not overlay_dir:    self.done.emit(False); return
         if not self._initialize_wine_prefix(overlay_dir):    self.done.emit(False); return
 
@@ -36,8 +34,6 @@ class Prefix(QThread):
             ]
 
     def _create_overlay(self):
-        
-        if os.path.exists(overlay_dir): self.log.emit(f"❌ Overlay-Dir existing: {overlay_dir}"); return None
             
         overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
         os.makedirs(overlay_dir, exist_ok=True)
