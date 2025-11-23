@@ -36,7 +36,9 @@ class Prefix(QThread):
             ]
 
     def _create_overlay(self):
-
+        
+        if os.path.exists(overlay_dir): self.log.emit(f"❌ Overlay-Dir existing: {overlay_dir}"); return None
+            
         overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
         os.makedirs(overlay_dir, exist_ok=True)
         for subdir in ("upper", "work", "merged"):    os.makedirs(os.path.join(overlay_dir, subdir), exist_ok=True)
