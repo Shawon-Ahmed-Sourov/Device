@@ -28,6 +28,12 @@ class Prefix(QThread):
 
         self.done.emit(True)
 
+    def _build_overlay_mount_command(self, lower_dir, overlay_dir):
+        return [    'pkexec', 'mount', '-t', 'overlay', 'overlay', '-o',
+                    f'lowerdir={lower_dir},upperdir={overlay_dir}/upper,workdir={overlay_dir}/work',
+                    os.path.join(overlay_dir, "merged")
+            ]
+
     def _create_overlay(self):
 
         overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
@@ -43,12 +49,6 @@ class Prefix(QThread):
             subprocess.run(mount_command, check=True)
             self.log.emit("✅ Overlay mounted successfully."); return overlay_dir
         except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Overlay setup failed: {e}"); return None
-
-    def _build_overlay_mount_command(self, lower_dir, overlay_dir):
-        return [    'pkexec', 'mount', '-t', 'overlay', 'overlay', '-o',
-                    f'lowerdir={lower_dir},upperdir={overlay_dir}/upper,workdir={overlay_dir}/work',
-                    os.path.join(overlay_dir, "merged")
-            ]
 
     def _build_wine_env(self, merged_dir):
 
