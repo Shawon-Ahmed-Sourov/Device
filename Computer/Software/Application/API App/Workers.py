@@ -72,7 +72,7 @@ class Prefix(QThread):
             for line in winecfg_result.stderr.splitlines():    self.log.emit(f"Winecfg error: {line}")
 
             reg_result = subprocess.run([self.wine, "reg","add", "HKCU\\Software\\Wine\\Wine\\Config", "/v","Version","/d","10.0","/f"],
-                                     env=env, cwd=os.path.dirname(self.exe_path), check=True, capture_output=True, text=True)
+                                     env=env, cwd=os.path.dirname(self.exe_path), check=True, capture_output=True, text=True, bufsize=1 )
             for line in reg_result.stdout.splitlines():    self.log.emit(f"✅output_{line}")
             for line in reg_result.stderr.splitlines():    self.log.emit(f"❌error_{line}")
 
