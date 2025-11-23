@@ -1,3 +1,4 @@
+
 import os
 import subprocess
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -61,22 +62,23 @@ class Prefix(QThread):
                 }
 
     def _initialize_wine_prefix(self, overlay_dir):
-
         merged_dir = os.path.join(overlay_dir, "merged")
-        drive_c_dir = os.path.join(merged_dir, "drive_c", "windows")
-        os.makedirs(drive_c_dir, exist_ok=True)
+        os.makedirs(os.path.join(merged_dir, "drive_c", "windows"), exist_ok=True)
 
         env = self._build_wine_env(merged_dir)
         try:
-            subprocess.run([self.wine, "winecfg"], env=env, cwd=os.path.dirname(self.exe_path), check=True)
-            subprocess.run([self.wine, "reg", "add", "HKCU\\Software\\Wine\\Wine\\Config", "/v", "Version", "/d", "10.0", "/f"],
-                           env=env, cwd=os.path.dirname(self.exe_path), check=True)
+            winecfg_result = subprocess.run([self.wine, "winecfg"], env=env, cwd=os.path.dirname(self.exe_path), check=True, capture_output=True, text=True)
+            for line in winecfg_result.stdout.splitlines():    self.log.emit(f"Winecfg output: {line}")
+            for line in winecfg_result.stderr.splitlines():    self.log.emit(f"Winecfg error: {line}")
+
+            reg_result = subprocess.run([self.wine, "reg","add", "HKCU\\Software\\Wine\\Wine\\Config", "/v","Version","/d","10.0","/f"],
+                                     env=env, cwd=os.path.dirname(self.exe_path), check=True, capture_output=True, text=True)
+            for line in reg_result.stdout.splitlines():    self.log.emit(f"✅output_{line}")
+            for line in reg_result.stderr.splitlines():    self.log.emit(f"❌error_{line}")
+
             self.log.emit("✅ Wine prefix initialized with Win10 successfully.")
             return True
-        except subprocess.CalledProcessError as e:
-            self.log.emit(f"❌ Wine prefix initialization failed: {e}")
-            return False
-
+        except subprocess.CalledProcessError as e:  self.log.emit(f"❌ Wine prefix initialization failed: {e}"); return False
 
 
     ### Temp Prefix Deletion
