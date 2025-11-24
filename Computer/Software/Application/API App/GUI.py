@@ -35,10 +35,9 @@ class WineLauncher(QWidget):
         super().__init__()
         self.setWindowTitle("Wine EXE Launcher")
         self.resize(920, 520)
-
-        self.bprefix_path = None; self.temp_prefix_path = None
-
-        self.exe_file = None ; self.exe_path = None; self.BepInEx_path = None
+        self.wine, self.mono = 'wine', 'mono'
+        self.bprefix_path    = self.temp_prefix_path = None
+        self.exe_path        = self.exe_file = self.BepInEx_path = None
 
         self.init_ui()
 
@@ -46,12 +45,12 @@ class WineLauncher(QWidget):
 
     def row(self, *widgets):
         layout = QHBoxLayout()
-        for widget in widgets : layout.addWidget(widget) 
+        for widget in widgets : layout.addWidget(widget)
         return layout
 
     def create_button(self, label, fn, enabled=True):   return QPushButton(label, clicked=fn, enabled=enabled)
     def create_combo_box(self, items):    combo = QComboBox(self); combo.addItems(items); return combo
-    def create_checkbox(self, label):    return QCheckBox(label)
+    def create_checkbox( self, label):    return QCheckBox(label)
     def create_text_edit(self):    log = QTextEdit(readOnly=True); return log
 
     def create_checkbox_group(self):
@@ -76,7 +75,7 @@ class WineLauncher(QWidget):
         # Create buttons
         self.b_selbase = self.create_button("Select The BasePrefix", self.sel_bprefix)
         self.b_exe = self.create_button("Select The G-Soft.exe", self.sel_exe)
-        self.b_run = self.create_button("Launch and Analyze", self.launch_analyze_exe)
+        self.b_run = self.create_button("Launch and Analyze", self.launchan)
 
         # ComboBoxes
         self.modify_base = self.create_combo_box(["BasePrefix Options : None", "Create Base Prefix", "Delete Base Prefix", "Run WineCfg", "Install-Dlls"])
@@ -98,10 +97,8 @@ class WineLauncher(QWidget):
         v.addWidget(self.sep())
 
         # Checkbox group
-        log_h = QHBoxLayout()
-        chk_v = self.create_checkbox_group()
+        log_h = QHBoxLayout() ; chk_v = self.create_checkbox_group()
 
-        # Text Edit for log
         self.log = self.create_text_edit()
 
         log_h.addWidget(self.log, 1) ; log_h.addLayout(chk_v, 0)
@@ -119,11 +116,13 @@ class WineLauncher(QWidget):
 
         self.log.append(f"💻Executable selected: {exe_file}")
 
-        self.exe_path = os.path.dirname(exe_file); self.log.append(f"📂Executable path: {self.exe_path}")
+        self.exe_path = os.path.dirname(exe_file)
+        self.log.append(f"📂Executable path: {self.exe_path}")
         
-        self.worker = BepInExPath_Searcher(self.exe_path) ; self.worker.log_signal.connect(self.log.append)  # Create the worker & Connect log_signal to the QTextEdit log
+        self.worker = BepInExPath_Searcher(self.exe_path)
+        self.worker.log_signal.connect(self.log.append)
         self.worker.result_signal.connect(lambda path: (setattr(self, 'BepInEx_path', path),    self.log.append(f"✅ Saved BepInEx path: {self.BepInEx_path}")))
-        self.worker.start() # Start the worker thread
+        self.worker.start()
 
 
     def sel_bprefix(self):
@@ -134,33 +133,23 @@ class WineLauncher(QWidget):
         
 
     def on_resolution_changed(self, index):
+
         selected_option = self.resolution.itemText(index)
         self.log.append(f"Resolution option selected: {selected_option}")
-        # Additional logic goes here...
-
 
     def on_checkbox_state_changed(self, state):
-        sender = self.sender()  # Get the checkbox that triggered the signal
-        checkbox_label = sender.text()
 
+        sender = self.sender() ; checkbox_label = sender.text()
         if state == Qt.Checked: self.log.append(f"{checkbox_label} is enabled.")
         else:                   self.log.append(f"{checkbox_label} is disabled.")
 
 
-
     def on_modify_temp_changed(self, index):
+
         temp_action = self.modify_temp.itemText(index)
         self.log.append(f"\n\nTemp Prefix option selected: {temp_action}")
 
-        if temp_action == "Delete" :
-            self.log.append("Starting Wine Prefix Deletion...")
-            self.worker_thread = Prefix( num =4,    exe_path=self.exe_path )
-            self.worker_thread.log.connect( self.log.append )
-            self.worker_thread.done.connect( lambda success:
-                self.log.append("✅ Wine prefix deleted successfully!" if success else "❌ Wine prefix deletion failed."))
-            self.worker_thread.start()
-
-        elif temp_action == "Create" :
+        if  temp_action == "Create" :
 
             self.log.append("Starting Wine Prefix creation...")
             self.worker_thread = Prefix( num =3, exe_path=self.exe_path, bprefix_path=self.bprefix_path )
@@ -168,21 +157,24 @@ class WineLauncher(QWidget):
             self.worker_thread.done.connect( lambda success:
                 self.log.append( "✅ Wine prefix created successfully!\n" if success else "❌ Wine prefix creation failed.\n"))
             self.worker_thread.start()
-            
+
+        elif temp_action == "Delete" :
+            self.log.append("Starting Wine Prefix Deletion...")
+            self.worker_thread = Prefix( num =4,    exe_path=self.exe_path )
+            self.worker_thread.log.connect( self.log.append )
+            self.worker_thread.done.connect( lambda success:
+                self.log.append("✅ Wine prefix deleted successfully!" if success else "❌ Wine prefix deletion failed."))
+            self.worker_thread.start()
+
         else : pass 
 
-
     def on_modify_base_changed(self, index):
+
         base_option = self.modify_base.itemText(index)
         self.log.append(f"Base Prefix option selected: {base_option}")
 
-        if base_action == "Delete" :
-            self.log.append("Working On Deleting Existing BasePrefix")
-            # worker_class_thread( self.bprefix_path )
-
-        elif base_action == "Create" :
-            self.log.append("Working On Creating BasePrefix")
-            
+        if   base_action == "Delete" :    self.log.append("Working On Deleting Existing BasePrefix")
+        elif base_action == "Create" :    self.log.append("Working On Creating BasePrefix")
         else : pass 
 
-    def launch_analyze_exe(self):    self.log.append("Launching EXE...")
+    def launchan(self):    self.log.append("Launching EXE...")
