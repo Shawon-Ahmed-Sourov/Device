@@ -20,8 +20,8 @@ class WineLauncher(QWidget):
     def row(self, *btns): h = QHBoxLayout(); [h.addWidget(b) for b in btns]; return h
 
     def build_ui(self):
-        v = QVBoxLayout()
-        mk = lambda t, fn, en=True: QPushButton(t, clicked=fn, enabled=en)
+
+        v = QVBoxLayout(); mk = lambda t, fn, en=True: QPushButton(t, clicked=fn, enabled=en)
 
         self.b_base = mk("Create A BasePrefix", self.create_base)
         self.b_modb = mk("Modify BasePrefix", self.modify_base, False)
@@ -42,20 +42,19 @@ class WineLauncher(QWidget):
             self.row(self.b_inst, self.b_modify_temp, self.b_sel_resolution),
             self.row(self.b_run)
         ):
-            v.addLayout(r)
-            v.addWidget(self.sep())
+            v.addLayout(r); v.addWidget(self.sep())
 
-        log_h = QHBoxLayout()
-        chk_v = QVBoxLayout()
+        log_h = QHBoxLayout(); chk_v = QVBoxLayout()
         self.chk_wine, self.chk_vulkan, self.chk_dxvk, self.chk_vkd3d, self.chk_gamemode = [QCheckBox(t) for t in ("Wine", "Vulkan", "DXVK", "VKD3D", "Gamemode")]
         for c in (self.chk_wine, self.chk_vulkan, self.chk_dxvk, self.chk_vkd3d, self.chk_gamemode): chk_v.addWidget(c)
 
         self.log = QTextEdit(readOnly=True)
-        log_h.addLayout(chk_v)
-        log_h.addWidget(self.log)
+        log_h.addLayout(chk_v); log_h.addWidget(self.log)
         v.addLayout(log_h)
 
         self.setLayout(v)
+
+     # Method definitions below------------------------------------------------------------------------------------
 
     def create_base(self): self.log.append("⚡ Create a Base Prefix: Not yet implemented.")
     def modify_base(self): self.log.append("⚡ Cleaning and updating Base Prefix: Not yet implemented.")
@@ -101,8 +100,7 @@ class WineLauncher(QWidget):
             out = subprocess.run(["vulkaninfo"], capture_output=True, text=True, timeout=5).stdout
             self.vulkan_ok = "deviceName" in out
             self.log.append("✅ Vulkan supported." if self.vulkan_ok else "❌ Vulkan not detected.")
-        except Exception as e:
-            self.log.append(f"❌ Vulkan check failed: {e}")
+        except Exception as e:    self.log.append(f"❌ Vulkan check failed: {e}")
 
     def check_dxvk(self):
         s32 = os.path.join(self.base, "drive_c", "windows", "system32")
@@ -119,8 +117,7 @@ class WineLauncher(QWidget):
     def update_run_button(self): self.b_run.setEnabled(bool(self.exe) and os.path.exists(self.temp))
 
     def launch_analyze_exe(self):
-        if not (self.exe and os.path.exists(self.temp)):
-            return self.log.append("❌ EXE or Temp Prefix not ready.")
+        if not (self.exe and os.path.exists(self.temp)):    return self.log.append("❌ EXE or Temp Prefix not ready.")
         self.worker = AnalyzeAndRunExeWorker(self.exe, self.temp, self.wine)
         self.worker.log.connect(self.log.append)
         self.worker.started_signal.connect(self.log.append)
