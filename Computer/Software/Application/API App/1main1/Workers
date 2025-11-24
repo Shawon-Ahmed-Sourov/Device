@@ -5,26 +5,22 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 # Helper functions
 def run_subprocess(cmd, env=None, cwd=None, check=True, capture_output=False):
-    try:
-        return subprocess.run(cmd, env=env, cwd=cwd, check=check, capture_output=capture_output, text=True)
-    except subprocess.CalledProcessError as e:
-        return e
+    try:    return subprocess.run(cmd, env=env, cwd=cwd, check=check, capture_output=capture_output, text=True)
+    except subprocess.CalledProcessError as e:    return e
 
 
 def detect_fs(path):
     try:
         out = subprocess.run(["df", "-T", path], capture_output=True, text=True, check=True).stdout
         return out.splitlines()[1].split()[1].lower()
-    except:
-        return "unknown"
+    except:    return "unknown"
 
 
 # Base Worker class
 class BaseWorker(QThread):
     log = pyqtSignal(str)
 
-    def emit_log(self, msg):
-        self.log.emit(msg)
+    def emit_log(self, msg):    self.log.emit(msg)
 
 
 # Worker for installing DLLs via Winetricks
@@ -34,9 +30,7 @@ class InstallDllsWorker(BaseWorker):
         self.base = base
 
     def run(self):
-        if shutil.which("winetricks") is None:
-            self.emit_log("❌ winetricks not found. Please install it.")
-            return
+        if shutil.which("winetricks") is None:    self.emit_log("❌ winetricks isnt Installed."); return
 
         self.emit_log("⚡ Opening Winetricks GUI...")
         subprocess.Popen(["winetricks"], env={"WINEPREFIX": self.base, **os.environ})
@@ -54,26 +48,24 @@ class TemprefixWorker(BaseWorker):
     def run(self):
         u, w, m = [os.path.join(self.temp, p) for p in ("upper", "work", "merged")]
 
-        for cmd in [["fusermount", "-u", m], ["sudo", "umount", "-l", m]]:
-            run_subprocess(cmd, check=False)
+        for cmd in [["fusermount", "-u", m], ["sudo", "umount", "-l", m]]:    run_subprocess(cmd, check=False)
         time.sleep(0.3)
 
-        for d in (u, w, m):
-            os.makedirs(d, exist_ok=True)
+        for d in (u, w, m):    os.makedirs(d, exist_ok=True)
 
         fs = detect_fs(self.temp)
         mount_cmd = self.get_overlay_mount_cmd(fs, u, w, m)
 
         if mount_cmd:
+
             run_subprocess(mount_cmd, check=True)
             self.emit_log(f"✅ Temp Prefix created at {m}")
-
             self.setup_wine_prefix(m)
 
     def get_overlay_mount_cmd(self, fs, u, w, m):
         if fs in ("ext4", "btrfs", "xfs"):
             self.emit_log(f"⚡ Using native OverlayFS on {fs}.")
-            return ["sudo", "mount", "-t", "overlay", "overlay", "-o", f"lowerdir={self.base},upperdir={u},workdir={w}", m]
+            return ["pkexec", "mount", "-t", "overlay", "overlay", "-o", f"lowerdir={self.base},upperdir={u},workdir={w}", m]
         else:
             self.emit_log(f"⚡ Using fuse-overlayfs on {fs}.")
             return ["fuse-overlayfs", "-o", f"lowerdir={self.base},upperdir={u},workdir={w}", m]
@@ -96,9 +88,7 @@ class DeleteTempPrefixWorker(BaseWorker):
         self.temp = temp
 
     def run(self):
-        if not os.path.exists(self.temp):
-            self.emit_log("ℹ️ No Temp Prefix found.")
-            return
+        if not os.path.exists(self.temp):    self.emit_log("ℹ️ No Temp Prefix found."); return
 
         self.emit_log("🗑️ Deleting Temp Prefix...")
         m = os.path.join(self.temp, "merged")
@@ -107,22 +97,17 @@ class DeleteTempPrefixWorker(BaseWorker):
         time.sleep(0.3)
 
         try:
-            shutil.rmtree(self.temp)
-            self.emit_log("✅ Temp Prefix deleted.")
-        except PermissionError:
-            self.emit_log("⚡ Using sudo for deletion...")
-            run_subprocess(["sudo", "rm", "-rf", self.temp], check=True)
-            self.emit_log("✅ Temp Prefix deleted via sudo.")
-        except Exception as e:
-            self.emit_log(f"❌ Deletion failed: {e}")
+            self.emit_log("⚡ Using Pkexec for deletion...")
+            run_subprocess(["pkexec", "rm", "-rf", self.temp], check=True)
+            self.emit_log("✅ Temp Prefix deleted via Pkexec.")
+        except Exception as e:    self.emit_log(f"❌ Deletion failed: {e}")
 
     def cleanup_mount(self, m):
-        # Ensure the mount point exists before trying to unmount it
+
         if os.path.exists(m):
-            for cmd in [["fusermount", "-u", m], ["sudo", "umount", "-l", m]]:
-                run_subprocess(cmd, check=False)
-        else:
-            self.emit_log(f"ℹ️ Mount point {m} does not exist, skipping unmount.")
+            for cmd in [["fusermount", "-u", m], ["sudo", "umount", "-l", m]]:    run_subprocess(cmd, check=False)
+
+        else:    self.emit_log(f"ℹ️ Mount point {m} does not exist, skipping unmount.")
 
 
 # Worker to analyze and run an EXE using Wine
