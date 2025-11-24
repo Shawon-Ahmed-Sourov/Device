@@ -37,9 +37,8 @@ class TemprefixWorker(QThread):
         self._initialize_tprefix(m)
 
     def _prepare_dirs(self, u, w, m):
-        try:
-            time.sleep(0.3)
-            [os.makedirs(d, exist_ok=True) for d in (u, w, m)]
+
+        try:    [os.makedirs(d, exist_ok=True) for d in (u, w, m)]
         except OSError as e:    self.log.emit(f"❌ Directory couldn't prepare: {e}"); self.done.emit(False)
 
     def _detect_fs(self, path):
@@ -59,8 +58,8 @@ class TemprefixWorker(QThread):
                 fs_type = "fuse-overlayfs"
     
             self.log.emit(f"⚡ Using {fs_type} on {fs}.") ; subprocess.run(cmd, check=True)
-            
             self.log.emit(f"✅ TPrefix created at {m}")
+            
         except subprocess.CalledProcessError as e: self.log.emit(f"❌ Overlay couldn't mount: {e}"); self.done.emit(False)
 
     def _initialize_tprefix(self, m):
@@ -80,9 +79,7 @@ class DeleteTempPrefixWorker(QThread):
     def __init__(self, temp):    super().__init__(); self.temp = temp
 
     def run(self):
-        if not os.path.exists(self.temp):
-            self.log.emit("ℹ️ No Temp Prefix found.")
-            return
+        if not os.path.exists(self.temp):    self.log.emit("ℹ️ No Temp Prefix found."); return
         self._delete_temp_prefix()
 
     def _delete_temp_prefix(self):
