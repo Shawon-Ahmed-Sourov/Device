@@ -40,15 +40,13 @@ class TemprefixWorker(QThread):
         try:
             time.sleep(0.3)
             [os.makedirs(d, exist_ok=True) for d in (u, w, m)]
-        except OSError as e:
-            self.log.emit(f"❌ Directory couldn't prepare: {e}"); self.done.emit(False)
+        except OSError as e:    self.log.emit(f"❌ Directory couldn't prepare: {e}"); self.done.emit(False)
 
     def _detect_fs(self, path):
         try:
             out = subprocess.run(["df", "-T", path], capture_output=True, text=True, check=True).stdout
             return out.splitlines()[1].split()[1].lower()
-        except subprocess.CalledProcessError:
-            self.log.emit(f"❌ Error detecting filesystem"); return "unknown"
+        except subprocess.CalledProcessError:    self.log.emit(f"❌ Error detecting filesystem"); return "unknown"
 
     def _create_tprefix(self, u, w, m, fs):
         try:
