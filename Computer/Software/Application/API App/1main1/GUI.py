@@ -53,7 +53,8 @@ class WineLauncher(QWidget):
 
         self.setLayout(v)
 
-    # Prefix Operations
+    # GUI Part Done , Now For Connecting Methods Definition : --------------------------------------------------------------
+    
     def create_base(self):    self.log.append("⚡ Create a Base Prefix: Not yet implemented.")
     def modify_base(self):    self.log.append("⚡ Cleaning and updating Base Prefix: Not yet implemented.")
 
@@ -129,4 +130,3 @@ class WineLauncher(QWidget):
 
     def modify_temp(self):    self.log.append("⚡ Modify Temp Prefix: Not yet implemented.")    
     def sel_resolution(self):    self.log.append("⚡ Select The Resolution: Not yet implemented.")
-        
