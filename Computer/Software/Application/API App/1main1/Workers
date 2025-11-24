@@ -2,156 +2,150 @@ import os, time, queue, shutil
 import threading, subprocess
 from PyQt5.QtCore import QThread, pyqtSignal
 
+class InstallDllsWorker(QThread):
 
-# Helper functions
-def run_subprocess(cmd, env=None, cwd=None, check=True, capture_output=False):
-    try:    return subprocess.run(cmd, env=env, cwd=cwd, check=check, capture_output=capture_output, text=True)
-    except subprocess.CalledProcessError as e:    return e
-
-
-def detect_fs(path):
-    try:
-        out = subprocess.run(["df", "-T", path], capture_output=True, text=True, check=True).stdout
-        return out.splitlines()[1].split()[1].lower()
-    except:    return "unknown"
-
-
-# Base Worker class
-class BaseWorker(QThread):
     log = pyqtSignal(str)
 
-    def emit_log(self, msg):    self.log.emit(msg)
-
-
-# Worker for installing DLLs via Winetricks
-class InstallDllsWorker(BaseWorker):
-    def __init__(self, base):
-        super().__init__()
-        self.base = base
+    def __init__(self, base):    super().__init__(); self.base = base
 
     def run(self):
-        if shutil.which("winetricks") is None:    self.emit_log("❌ winetricks isnt Installed."); return
+        if shutil.which("winetricks") is None:
+            self.log.emit("❌ winetricks isn't Installed."); return
 
-        self.emit_log("⚡ Opening Winetricks GUI...")
-        subprocess.Popen(["winetricks"], env={"WINEPREFIX": self.base, **os.environ})
-        self.emit_log(f"✅ Terminal-Command: $ WINEPREFIX={self.base} winetricks")
+        self._start_winetricks()
+
+    def _start_winetricks(self):
+        try:
+            self.log.emit("⚡ Opening Winetricks GUI...")
+            subprocess.Popen(["winetricks"], env={"WINEPREFIX": self.base, **os.environ})
+            self.log.emit(f"✅ Terminal-Command: $ WINEPREFIX={self.base} winetricks")
+        except Exception as e:    self.log.emit(f"❌ Failed to start winetricks: {e}")
 
 
-# Worker to setup a temporary Wine prefix
-class TemprefixWorker(BaseWorker):
-    done = pyqtSignal(bool)
+class TemprefixWorker(QThread):
+
+    log = pyqtSignal(str); done = pyqtSignal(bool)
 
     def __init__(self, exe, base, temp, wine):
         super().__init__()
-        self.exe, self.base, self.temp, self.wine = exe, base, temp, wine
+
+        self.base = base
+        self.temp = temp ; self.wine = wine ; self.exe = exe
 
     def run(self):
         u, w, m = [os.path.join(self.temp, p) for p in ("upper", "work", "merged")]
+        self._prepare_dirs(u, w, m)
+        fs = self._detect_fs(self.temp)
+        self._create_tprefix(u, w, m, fs)
+        self._initialize_tprefix(m)
 
-        for cmd in [["fusermount", "-u", m], ["sudo", "umount", "-l", m]]:    run_subprocess(cmd, check=False)
-        time.sleep(0.3)
+    def _prepare_dirs(self, u, w, m):
+        try:
+            for cmd in (["fusermount", "-u", m], ["pkexec", "umount", "-l", m]):
+                subprocess.run(cmd, check=False)
+            time.sleep(0.3)
+            [os.makedirs(d, exist_ok=True) for d in (u, w, m)]
+        except Exception as e:    self.log.emit(f"❌ Directory couldn't prepare: {e}"); self.done.emit(False)
 
-        for d in (u, w, m):    os.makedirs(d, exist_ok=True)
+    def _detect_fs(self, path):
+        try:
+            out = subprocess.run(["df", "-T", path], capture_output=True, text=True, check=True).stdout
+            return out.splitlines()[1].split()[1].lower()
+        except:    return "unknown"
 
-        fs = detect_fs(self.temp)
-        mount_cmd = self.get_overlay_mount_cmd(fs, u, w, m)
+    def _create_tprefix(self, u, w, m, fs):
+        try:
+            if fs in ("ext4", "btrfs", "xfs"):
+                cmd = ["pkexec", "mount", "-t", "overlay", "overlay", "-o", f"lowerdir={self.base},upperdir={u},workdir={w}", m]
+                self.log.emit(f"⚡ Using native OverlayFS on {fs}.")
+            else:
+                cmd = ["fuse-overlayfs", "-o", f"lowerdir={self.base},upperdir={u},workdir={w}", m]
+                self.log.emit(f"⚡ Using fuse-overlayfs on {fs}.")
 
-        if mount_cmd:
+            subprocess.run(cmd, check=True); self.log.emit(f"✅ TPrefix created at {m}")
 
-            run_subprocess(mount_cmd, check=True)
-            self.emit_log(f"✅ Temp Prefix created at {m}")
-            self.setup_wine_prefix(m)
+        except Exception as e:    self.log.emit(f"❌ Overlay couldn't mount: {e}"); self.done.emit(False)
 
-    def get_overlay_mount_cmd(self, fs, u, w, m):
-        if fs in ("ext4", "btrfs", "xfs"):
-            self.emit_log(f"⚡ Using native OverlayFS on {fs}.")
-            return ["pkexec", "mount", "-t", "overlay", "overlay", "-o", f"lowerdir={self.base},upperdir={u},workdir={w}", m]
-        else:
-            self.emit_log(f"⚡ Using fuse-overlayfs on {fs}.")
-            return ["fuse-overlayfs", "-o", f"lowerdir={self.base},upperdir={u},workdir={w}", m]
+    def _initialize_tprefix(self, m):
+        try:
+            env = {**os.environ, "WINEPREFIX": m, "WINEDLLOVERRIDES": "mscoree,mshtml=", "WINEDEBUG": "-all"}
+            os.makedirs(os.path.join(m, "drive_c", "windows"), exist_ok=True)
 
-    def setup_wine_prefix(self, m):
-        env = {**os.environ, "WINEPREFIX": m, "WINEDLLOVERRIDES": "mscoree,mshtml=", "WINEDEBUG": "-all"}
-        os.makedirs(os.path.join(m, "drive_c", "windows"), exist_ok=True)
+            if not os.path.exists(os.path.join(m, "user.reg")):
+                subprocess.run([self.wine, "wineboot", "-u"], env=env, cwd=os.path.dirname(self.exe), check=True)
 
-        if not os.path.exists(os.path.join(m, "user.reg")):
-            run_subprocess([self.wine, "wineboot", "-u"], env=env, cwd=os.path.dirname(self.exe), check=True)
-
-        self.emit_log("✅ Temp Prefix initialized and set to Windows 10.")
-        self.done.emit(True)
+            self.log.emit("✅ TPrefix Initialized with Windows 10."); self.done.emit(True)
+        except Exception as e:    self.log.emit(f"❌ TPrefix couldn't setup: {e}"); self.done.emit(False)
 
 
-# Worker to delete the temporary Wine prefix
-class DeleteTempPrefixWorker(BaseWorker):
-    def __init__(self, temp):
-        super().__init__()
-        self.temp = temp
+class DeleteTempPrefixWorker(QThread):
+    log = pyqtSignal(str)
+
+    def __init__(self, temp):    super().__init__(); self.temp = temp
 
     def run(self):
-        if not os.path.exists(self.temp):    self.emit_log("ℹ️ No Temp Prefix found."); return
+        if not os.path.exists(self.temp):
+            self.log.emit("ℹ️ No Temp Prefix found.")
+            return
+        self._delete_temp_prefix()
 
-        self.emit_log("🗑️ Deleting Temp Prefix...")
+    def _delete_temp_prefix(self):
         m = os.path.join(self.temp, "merged")
-
-        self.cleanup_mount(m)
-        time.sleep(0.3)
-
         try:
-            self.emit_log("⚡ Using Pkexec for deletion...")
-            run_subprocess(["pkexec", "rm", "-rf", self.temp], check=True)
-            self.emit_log("✅ Temp Prefix deleted via Pkexec.")
-        except Exception as e:    self.emit_log(f"❌ Deletion failed: {e}")
+            for cmd in (["fusermount", "-u", m], ["pkexec", "umount", "-l", m]):
+                subprocess.run(cmd, check=False)
+            time.sleep(0.3)
+            self._execute_deletion()
+        except Exception as e:    self.log.emit(f"❌ Deletion failed: {e}")
 
-    def cleanup_mount(self, m):
+    def _execute_deletion(self):
+        try:
+            self.log.emit("⚡ Using Pkexec for deletion...")
+            subprocess.run(["pkexec", "rm", "-rf", self.temp], check=True)
+            self.log.emit("✅ Temp Prefix deleted via Pkexec.")
+        except Exception:    self.log.emit("❌ Deletion failed.")
 
-        if os.path.exists(m):
-            for cmd in [["fusermount", "-u", m], ["sudo", "umount", "-l", m]]:    run_subprocess(cmd, check=False)
 
-        else:    self.emit_log(f"ℹ️ Mount point {m} does not exist, skipping unmount.")
-
-
-# Worker to analyze and run an EXE using Wine
-class AnalyzeAndRunExeWorker(BaseWorker):
+class AnalyzeAndRunExeWorker(QThread):
+    log = pyqtSignal(str)
     started_signal = pyqtSignal(str)
 
     def __init__(self, exe, temp, wine):
         super().__init__()
-        self.exe, self.temp, self.wine = exe, temp, wine
+
+        self.temp = temp ; self.exe = exe ; self.wine = wine
 
     def run(self):
+        
         m = os.path.join(self.temp, "merged")
-        env = self.get_env(m)
+        env = self._setup_env(m)
+        self._launch_exe(env, m)
 
-        cmd = [self.wine, self.exe]
-        self.started_signal.emit(f"🚀 Launching EXE:\n$ {' '.join(f'{k}={v}' for k, v in env.items() if k.startswith('WINE'))} {' '.join(cmd)}")
-
-        try:
-            proc = subprocess.Popen(cmd, env=env, cwd=os.path.dirname(self.exe), stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT, text=True, bufsize=1)
-            self.monitor_process_output(proc)
-        except Exception as e:
-            self.emit_log(f"❌ Failed to start EXE: {e}")
-            self.emit_log("⚠️ Process did not start correctly.")
-            return
-
-    def get_env(self, m):
+    def _setup_env(self, m):
         return {
             **os.environ,
             "WINEPREFIX": m,
+            "WINE_FULLSCREEN": "0",
+            "WINEDEBUG": "+timestamp,+warn",
+            "WINE_ALLOW_LARGE_ALLOCS": "1",
             "WINEESYNC": "1",
             "WINEFSYNC": "1",
             "WINEASYNC": "0",
-            "WINE_FULLSCREEN": "0",
-            "WINE_ALLOW_LARGE_ALLOCS": "1",
-            "WINEDEBUG": "+timestamp,+warn"
         }
 
-    def monitor_process_output(self, proc):
-        q = queue.Queue()
+    def _launch_exe(self, env, m):
+        cmd = [self.wine, self.exe]
+        self.started_signal.emit(f"🚀 Launching EXE:\n$ {' '.join([f'{k}={v}' for k, v in env.items() if k.startswith('WINE')])} {' '.join(cmd)}")
 
+        try:
+            proc = subprocess.Popen(cmd, env=env, cwd=os.path.dirname(self.exe), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+            self._monitor_proc_output(proc)
+        except Exception as e:    self.log.emit(f"❌ Launch failed: {e}")
+
+    def _monitor_proc_output(self, proc):
+        q = queue.Queue()
         def reader_thread():
-            for line in iter(proc.stdout.readline, ''):
-                q.put(line.strip())
+            for line in iter(proc.stdout.readline, ''):    q.put(line.strip())
             proc.stdout.close()
 
         threading.Thread(target=reader_thread, daemon=True).start()
@@ -161,24 +155,18 @@ class AnalyzeAndRunExeWorker(BaseWorker):
             try:
                 line = q.get(timeout=0.2)
                 if line:
-                    self.emit_log(line)
+                    self.log.emit(line)
                     if ".dll" in line.lower() and ("cannot" in line.lower() or "not found" in line.lower()):
                         missing_dlls.add(line.split()[0].lower())
-            except queue.Empty:
-                pass
+            except queue.Empty:    pass
 
-        # Check if the process has finished properly before accessing its return code
         proc.wait()
-        self.write_missing_dlls(missing_dlls, proc)
+        self._log_missing_dlls(missing_dlls, proc)
 
-    def write_missing_dlls(self, missing_dlls, proc):
-        # Avoid accessing proc if it is None
-        if hasattr(proc, 'returncode'):
-            self.emit_log(f"✅ Execution finished." if proc.returncode == 0 else "⚠️ EXE exited with error.")
-        else:
-            self.emit_log("⚠️ EXE terminated unexpectedly.")
-        
-        with open(os.path.join(os.path.dirname(self.exe), "Analyzable-wineoutput.txt"), "w") as f:
-            f.write("\n".join(missing_dlls))
+    def _log_missing_dlls(self, missing_dlls, proc):
+        with open(os.path.join(os.path.dirname(self.exe), "Analyzable-logs.txt"), "w") as f:f.write("\n".join(missing_dlls))
 
-        self.emit_log(f"❗ Missing DLLs: {', '.join(sorted(missing_dlls))}" if missing_dlls else "✅ No missing DLLs detected.")
+        if missing_dlls:    self.log.emit(f"❗ Missing DLLs: {', '.join(sorted(missing_dlls))}")
+        else:    self.log.emit("✅ No missing DLLs detected.")
+
+        self.log.emit("✅ Execution finished." if proc.returncode == 0 else "⚠️ EXE exited with error.")
