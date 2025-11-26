@@ -21,62 +21,46 @@ class Prefix(QThread):
     def create_temp_prefix(self):
 
         overlay_dir = self._create_overlay()
+
         if not overlay_dir:    self.done.emit(False); return
+
         if not self._initialize_wine_prefix(overlay_dir):    self.done.emit(False); return
 
         self.done.emit(True)
 
     def _create_overlay(self):
             
-        overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
-        os.makedirs(overlay_dir, exist_ok=True)
+        overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay") ; os.makedirs(overlay_dir, exist_ok=True)
         for subdir in ("upper", "work", "merged"):    os.makedirs(os.path.join(overlay_dir, subdir), exist_ok=True)
 
-        lower_dir = self.bprefix_path
-        merged_dir = os.path.join(overlay_dir, "merged")
-        mount_command = self._build_overlay_mount_command(lower_dir, overlay_dir)
+        lower_dir = self.bprefix_path ; merged_dir = os.path.join(overlay_dir, "merged")
+
+        mount_command = [  'pkexec', 'mount', '-t', 'overlay', 'overlay', '-o',
+                            f'lowerdir={lower_dir},upperdir={overlay_dir}/upper,workdir={overlay_dir}/work',
+                            os.path.join(overlay_dir, "merged")
+                        ]
 
         self.log.emit(f"Mounting: {mount_command}")
-        try:
-            subprocess.run(mount_command, check=True)
-            self.log.emit("✅ Overlay mounted successfully."); return overlay_dir
-        except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Overlay setup failed: {e}"); return None
-
-    def _build_overlay_mount_command(self, lower_dir, overlay_dir):
-        return [    'pkexec', 'mount', '-t', 'overlay', 'overlay', '-o',
-                    f'lowerdir={lower_dir},upperdir={overlay_dir}/upper,workdir={overlay_dir}/work',
-                    os.path.join(overlay_dir, "merged")
-            ]
-
-    def _build_wine_env(self, merged_dir):
-
-        return {**os.environ,
-                "WINEPREFIX": merged_dir,
-                "WINEUPDATE": "0",
-                "WINEDEBUG": "-all",
-                "WINEARCH": "win64",
-                "WINEDLLOVERRIDES": "dll=ignore"
-                }
+        try:  subprocess.run(mount_command, check=True) ; self.log.emit("✅ Overlay Mounted."); return overlay_dir
+        except subprocess.CalledProcessError as e:        self.log.emit(f"❌ Overlay setup failed: {e}"); return None
 
     def _initialize_wine_prefix(self, overlay_dir):
 
         merged_dir = os.path.join(overlay_dir, "merged")
-        os.makedirs(os.path.join(merged_dir, "drive_c", "windows"), exist_ok=True)
+        wine_prefix_dir = os.path.join(merged_dir, "drive_c", "windows", "system32")
 
-        env = self._build_wine_env(merged_dir)
+        if not os.path.exists(wine_prefix_dir): os.makedirs(os.path.join(merged_dir, "drive_c", "windows"), exist_ok=True)
+
+        env = {**os.environ, "WINEPREFIX": merged_dir, "WINEUPDATE": "0", "WINEDEBUG": "-all", "WINEARCH": "win64", "WINEDLLOVERRIDES": "dll=ignore"}
+
         try:
-            winecfg_result = subprocess.run([self.wine, "winecfg"], env=env, cwd=os.path.dirname(self.exe_path), check=True, capture_output=True, text=True)
-            for line in winecfg_result.stdout.splitlines():    self.log.emit(f"Winecfg output: {line}")
-            for line in winecfg_result.stderr.splitlines():    self.log.emit(f"Winecfg error: {line}")
+            if not os.path.exists(wine_prefix_dir): subprocess.run([self.wine, "winecfg"], env=env, cwd=os.path.dirname(self.exe_path), check=True)
+            if "Version" not in subprocess.run([self.wine, "reg", "query", "HKCU\\Software\\Wine\\Wine\\Config", "/v", "Version"], env=env, cwd=os.path.dirname(self.exe_path), capture_output=True, text=True).stdout:
+                subprocess.run([self.wine, "reg", "add", "HKCU\\Software\\Wine\\Wine\\Config", "/v", "Version", "/d", "10.0", "/f"], env=env, cwd=os.path.dirname(self.exe_path), check=True)
 
-            reg_result = subprocess.run([self.wine, "reg","add", "HKCU\\Software\\Wine\\Wine\\Config", "/v","Version","/d","10.0","/f"],
-                                     env=env, cwd=os.path.dirname(self.exe_path), check=True, capture_output=True, text=True, bufsize=1 )
-            for line in reg_result.stdout.splitlines():    self.log.emit(f"✅ output_{line}")
-            for line in reg_result.stderr.splitlines():    self.log.emit(f"❌ error_{line}")
-
-            self.log.emit("✅ WPrefix initialized with Win10 successfully.")
+            self.log.emit("✅ WPrefix initialized with Win10.")
             return True
-        except subprocess.CalledProcessError as e:  self.log.emit(f"❌ WPrefix initialization failed: {e}"); return False
+        except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Failed: {e}") ; return False
 
 
     ### Temp Prefix Deletion
@@ -105,3 +89,17 @@ class Prefix(QThread):
         except subprocess.CalledProcessError as e:
             self.log.emit(f"❌ Deletion exit code {e.returncode}.")
             self.log.emit(f"❌ Error output: {e.stderr}")
+
+
+
+class RunAnalyze(QThread):
+
+    log = pyqtSignal(str) ; started_signal = pyqtSignal(str)
+
+    def __init__(self, exe_file, tprefix=None, preso=None ):
+        super().__init__()
+        
+        self.tprefix = tpreix ; self.preso = preso
+        self.wine = 'wine' ; self.exe_file = exe_file
+
+    def run(self):
