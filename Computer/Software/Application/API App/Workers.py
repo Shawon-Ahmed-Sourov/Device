@@ -99,7 +99,7 @@ class RunAnalyze(QThread):
     def __init__(self, exe_file, tprefix=None, preso=None ):
         super().__init__()
         
-        self.tprefix = tpreix ; self.preso = preso
+        self.tprefix = tprefix ; self.preso = preso
         self.wine = 'wine' ; self.exe_file = exe_file
 
     def run(self):
