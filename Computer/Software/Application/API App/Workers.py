@@ -1,20 +1,19 @@
+
 import os, subprocess
 from PyQt5.QtCore import QThread, pyqtSignal
 
 class Prefix(QThread):
-
-    log = pyqtSignal(str); done = pyqtSignal(bool)
+    log = pyqtSignal(str) ; done = pyqtSignal(bool)
 
     def __init__(self, num, exe_path=None, bprefix_path=None):
         super().__init__()
-        self.num = num
-        self.wine = 'wine'; self.exe_path = exe_path; self.bprefix_path = bprefix_path
+        self.num = num ; self.wine = 'wine'
+        self.bprefix_path = bprefix_path ; self.exe_path = exe_path
 
     def run(self):
-
-        if    self.num == 3:    self.create_temp_prefix()
-        elif  self.num == 4:    self.delete_temp_prefix()
-        else: self.log.emit("❌ No Prefix Action Taken."); self.done.emit(False)
+        if   self.num == 3:    self.create_temp_prefix()
+        elif self.num == 4:    self.delete_temp_prefix()
+        else:    self.log.emit("❌ No Prefix Action Taken."); self.done.emit(False)
 
 
     ### Temp Prefix Creation
@@ -23,45 +22,49 @@ class Prefix(QThread):
         overlay_dir = self._create_overlay()
 
         if not overlay_dir:    self.done.emit(False); return
-
         if not self._initialize_wine_prefix(overlay_dir):    self.done.emit(False); return
 
         self.done.emit(True)
 
     def _create_overlay(self):
-            
-        overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay") ; os.makedirs(overlay_dir, exist_ok=True)
+
+        overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
+        os.makedirs(overlay_dir, exist_ok=True)
+
         for subdir in ("upper", "work", "merged"):    os.makedirs(os.path.join(overlay_dir, subdir), exist_ok=True)
 
         lower_dir = self.bprefix_path ; merged_dir = os.path.join(overlay_dir, "merged")
 
-        mount_command = [  'pkexec', 'mount', '-t', 'overlay', 'overlay', '-o',
-                            f'lowerdir={lower_dir},upperdir={overlay_dir}/upper,workdir={overlay_dir}/work',
-                            os.path.join(overlay_dir, "merged")
-                        ]
+        mount_command = [    'pkexec', 'mount', '-t', 'overlay', 'overlay', '-o',
+                        f'lowerdir={lower_dir},upperdir={overlay_dir}/upper,workdir={overlay_dir}/work',
+                        os.path.join(overlay_dir, "merged")    ]
 
         self.log.emit(f"Mounting: {mount_command}")
-        try:  subprocess.run(mount_command, check=True) ; self.log.emit("✅ Overlay Mounted."); return overlay_dir
-        except subprocess.CalledProcessError as e:        self.log.emit(f"❌ Overlay setup failed: {e}"); return None
+        try:    subprocess.run(mount_command, check=True); self.log.emit("✅ Overlay Mounted."); return overlay_dir
+        except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Overlay setup failed: {e}") ; return None
 
     def _initialize_wine_prefix(self, overlay_dir):
 
         merged_dir = os.path.join(overlay_dir, "merged")
         wine_prefix_dir = os.path.join(merged_dir, "drive_c", "windows", "system32")
 
-        if not os.path.exists(wine_prefix_dir): os.makedirs(os.path.join(merged_dir, "drive_c", "windows"), exist_ok=True)
+        if not os.path.exists(wine_prefix_dir):    os.makedirs(os.path.join(merged_dir, "drive_c", "windows"), exist_ok=True)
 
         env = {**os.environ, "WINEPREFIX": merged_dir, "WINEUPDATE": "0", "WINEDEBUG": "-all", "WINEARCH": "win64", "WINEDLLOVERRIDES": "dll=ignore"}
 
         try:
-            if not os.path.exists(wine_prefix_dir): subprocess.run([self.wine, "winecfg"], env=env, cwd=os.path.dirname(self.exe_path), check=True)
-            if "Version" not in subprocess.run([self.wine, "reg", "query", "HKCU\\Software\\Wine\\Wine\\Config", "/v", "Version"], env=env, cwd=os.path.dirname(self.exe_path), capture_output=True, text=True).stdout:
-                subprocess.run([self.wine, "reg", "add", "HKCU\\Software\\Wine\\Wine\\Config", "/v", "Version", "/d", "10.0", "/f"], env=env, cwd=os.path.dirname(self.exe_path), check=True)
+            if not os.path.exists(wine_prefix_dir):    subprocess.run([self.wine, "winecfg"], env=env, cwd=os.path.dirname(self.exe_path), check=True)
 
-            self.log.emit("✅ WPrefix initialized with Win10.")
+            wine_version_check = subprocess.run(    [ self.wine, "reg", "query", "HKCU\\Software\\Wine\\Wine\\Config", "/v", "Version"],
+                env=env, cwd=os.path.dirname(self.exe_path), capture_output=True, text=True    )
+
+            if "Version" not in wine_version_check.stdout:
+                subprocess.run(    [self.wine, "reg", "add", "HKCU\\Software\\Wine\\Wine\\Config", "/v", "Version", "/d", "10.0", "/f"],
+                    env=env, cwd=os.path.dirname(self.exe_path), check=True    )
+
+            self.log.emit("✅ Windows set to Win10 in Wine prefix.")
             return True
-        except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Failed: {e}") ; return False
-
+        except subprocess.CalledProcessError as e:  self.log.emit(f"❌ Couldn't Initializable WPrefix: {e}"); return False
 
     ### Temp Prefix Deletion
     def delete_temp_prefix(self):
@@ -69,26 +72,24 @@ class Prefix(QThread):
         overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
         merged_dir = os.path.join(overlay_dir, "merged")
 
-        if not os.path.exists(overlay_dir):             self.log.emit("ℹ️ No Temp Prefix found."); return
-        if not self._is_overlay_mounted(merged_dir):    self.log.emit(f"ℹ️ Unmountable : {merged_dir}."); return
+        if not os.path.exists(overlay_dir):    self.log.emit("ℹ️ No Temp Prefix found."); return
+
+        if not self._is_overlay_mounted(merged_dir):    self.log.emit(f"ℹ️ Overlay not mounted: {merged_dir}."); return
         self._unmount_and_delete(merged_dir, overlay_dir)
 
     def _is_overlay_mounted(self, merged_dir):
-
         result = subprocess.run(["mount"], check=True, capture_output=True, text=True)
         return merged_dir in result.stdout
 
     def _unmount_and_delete(self, merged_dir, overlay_dir):
-
         self.log.emit(f"Unmounting: {merged_dir}\nDeleting: {overlay_dir}")
-        
+
         command = f'umount "{merged_dir}" && rm -rf "{overlay_dir}"'
         try:
-            result = subprocess.run(["pkexec", "bash", "-c", command], check=True, capture_output=True, text=True)
-            self.log.emit("✅ Successfully Unmounted and Deleted.\n")
+            subprocess.run(["pkexec", "bash", "-c", command], check=True, capture_output=True, text=True)
+            self.log.emit("✅ Successfully Unmounted and Deleted.")
         except subprocess.CalledProcessError as e:
-            self.log.emit(f"❌ Deletion exit code {e.returncode}.")
-            self.log.emit(f"❌ Error output: {e.stderr}")
+            self.log.emit(f"❌ Deletion failed with exit code {e.returncode}.") ; self.log.emit(f"❌ Error output: {e.stderr}")
 
 
 
@@ -96,10 +97,9 @@ class RunAnalyze(QThread):
 
     log = pyqtSignal(str) ; started_signal = pyqtSignal(str)
 
-    def __init__(self, exe_file, tprefix=None, preso=None ):
+    def __init__(self, exe_file, tprefix=None, preso=None):
         super().__init__()
-        
-        self.tprefix = tprefix ; self.preso = preso
-        self.wine = 'wine' ; self.exe_file = exe_file
+        self.tprefix = tprefix
+        self.preso = preso ; self.wine = 'wine'; self.exe_file = exe_file
 
     def run(self):
