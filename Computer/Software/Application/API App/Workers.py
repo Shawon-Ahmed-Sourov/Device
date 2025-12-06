@@ -80,15 +80,16 @@ class Prefix(QThread):
 
 
 
-
     ### Temp Prefix Deletion
     def delete_temp_prefix(self):
 
-        overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay") ; merged_dir = os.path.join(overlay_dir, "merged")
+        overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
+        merged_dir = os.path.join(overlay_dir, "merged")
 
         if not os.path.exists(overlay_dir):    self.log.emit("ℹ️ No Temp Prefix found."); return
 
         if not self._is_overlay_mounted(merged_dir):    self.log.emit(f"ℹ️ Overlay not mounted: {merged_dir}."); return
+
         self._unmount_and_delete(merged_dir, overlay_dir)
 
 
@@ -99,14 +100,29 @@ class Prefix(QThread):
     def _unmount_and_delete(self, merged_dir, overlay_dir):
         self.log.emit(f"Unmounting: {merged_dir}\nDeleting: {overlay_dir}")
 
-        command = f'umount "{merged_dir}" && rm -rf "{overlay_dir}"'
+
         try:
+            self.log.emit("Only Deleting by unmounting.")
+            command = f'umount "{merged_dir}" && rm -rf "{overlay_dir}"'
             subprocess.run(["pkexec", "bash", "-c", command], check=True, capture_output=True, text=True)
             self.log.emit("✅ Successfully Unmounted and Deleted.")
             self.done.emit(True)
 
         except subprocess.CalledProcessError as e:
-            self.log.emit(f"❌ Deletion failed : {e.returncode}.") ; self.log.emit(f"❌ Error output: {e.stderr}"); self.done.emit(False)
+            # This block will catch specific subprocess errors
+            self.log.emit(f"❌ Deletion failed: {e.returncode}.")
+            self.log.emit(f"❌ Error output: {e.stderr}")
+            self.done.emit(False)
+
+            # If unmounting and deleting failed, try deleting normally
+            self.log.emit("Only Deleting Normally.")
+            command = f'rm -rf "{overlay_dir}"'
+            subprocess.run(["pkexec", "bash", "-c", command], check=True, capture_output=True, text=True)
+            self.log.emit("✅ Successfully Deleted.")
+            self.done.emit(True)
+
+        except Exception as e:    self.log.emit(f"❌ General error occurred: {str(e)}") ; self.done.emit(False)
+
 
 
 class RunAnalyze(QThread):
