@@ -1,4 +1,4 @@
-import os, time, subprocess
+import os, time, queue, threading, subprocess
 from PyQt5.QtCore import QThread, pyqtSignal
 
 class CJob:
@@ -124,14 +124,77 @@ class Prefix(QThread):
         except Exception as e:    self.log.emit(f"❌ General error occurred: {str(e)}") ; self.done.emit(False)
 
 
-
 class RunAnalyze(QThread):
 
-    log = pyqtSignal(str) ; started_signal = pyqtSignal(str)
+    log = pyqtSignal(str) ; done = pyqtSignal(bool)
 
-    def __init__(self, exe_file, tprefix=None, preso=None):
+    def __init__(self, exe_path, exe_file, tprefix_path =None, BepInEx_dll=None, preso=None):
         super().__init__()
-        self.tprefix = tprefix
-        self.preso = preso ; self.wine = 'wine'; self.exe_file = exe_file
+
+        self.wine = "wine" ; self.exe_file = exe_file ; self.tprefix_path = tprefix_path # Fin  Merged-Dir of N.OverlayFS
+        self.exe_path =exe_path ; self.BepInEx_dll =BepInEx_dll ; self.preso = preso
+
+        self.proc = None
 
     def run(self):
+
+        cmd, merged_env = self._build_command()
+        self._launch_exe(cmd, merged_env)
+
+
+    def _build_command(self):
+
+        env1 = {**os.environ, "WINEPREFIX": self.tprefix_path}
+        env2 = {
+            "WINE_FULLSCREEN": "0",
+            "WINEDEBUG": "+timestamp,+warn",
+            "WINE_ALLOW_LARGE_ALLOCS": "1",
+            "WINEESYNC": "1", "WINEFSYNC": "1", "WINEASYNC": "0"
+        }
+        merged_env = {**env1, **env2}
+        
+        cmd = [self.wine]
+        if self.BepInEx_dll:    cmd += ["mono", self.BepInEx_dll]
+        cmd += [self.exe_file]
+
+        return cmd, merged_env
+
+    def _launch_exe(self, cmd, env):
+
+        self.log.emit(f"🚀 Launching EXE:\n$ {' '.join(cmd)}")
+
+        try:
+            self.proc = subprocess.Popen(cmd, env=env, cwd=os.path.dirname(self.exe_file),
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+
+            if not self.proc : raise Exception("Failed to start the process.")
+
+            self._monitor_proc(self.proc)
+
+        except Exception as e:    self.log.emit(f"❌ Error launching game: {e}") ; self.done.emit(False)
+
+
+    def _monitor_proc(self, proc):
+        try:
+            if proc is None:    self.log.emit("❌ Process is None.") ; self.done.emit(False) ; return
+
+            # Continuous non-blocking read from stdout and stderr
+            while True:
+                output = proc.stdout.readline()
+                if output:    self.log.emit(output.strip())
+
+                error = proc.stderr.readline()
+                if error:    self.log.emit(f"ERROR: {error.strip()}")
+
+                return_code = proc.poll()
+                if return_code is not None:
+                    if return_code != 0:
+                        self.log.emit(f"❌ Process failed with return code {return_code}")
+                        break
+
+                time.sleep(0.1)
+        except Exception as e:    self.log.emit(f"❌ Error while monitoring process: {e}") ; self.done.emit(False)
+        else:    self.done.emit(True)  # Signal completion when the process ends
+
+
+
