@@ -1,33 +1,11 @@
 import os
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QCheckBox, QLabel, QSpacerItem, QSizePolicy, QFrame, QTextEdit, QFileDialog
-from Workers import Prefix
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QCheckBox, QLabel, QSpacerItem, QSizePolicy, QFrame, QTextEdit, QFileDialog
+from Workers import Prefix, RunAnalyze
 
 from PyQt5.QtCore import QThread, pyqtSignal
 
-#################################################################
-########## The QThreaded Working Class
-#################################################################
-
-class BepInExPath_Searcher(QThread):
-    result_signal = pyqtSignal(str) ; log_signal = pyqtSignal(str)     # Signaling results 2MThread & logs 2MThread
-
-    def __init__(self, exe_path):
-        super().__init__()
-        self.exe_path = exe_path
-
-    def run(self):
-        for root, dirs, files in os.walk(self.exe_path):
-            if "BepInEx" in dirs:
-                core_path = os.path.join(root, "BepInEx", "core")
-                if os.path.isdir(core_path) and "BepInEx.dll" in os.listdir(core_path):
-                    bep_path = os.path.join(core_path, "BepInEx.dll")
-                    self.log_signal.emit(f"✅ BepInEx.dll found: {bep_path}")
-                    self.result_signal.emit(bep_path) ; return
-        self.log_signal.emit("❌ BepInEx.dll not found in the expected directory.")
-
-#################################################################
 
 class WineLauncher(QWidget):
 
@@ -35,9 +13,9 @@ class WineLauncher(QWidget):
         super().__init__()
         self.setWindowTitle("Wine EXE Launcher")
         self.resize(920, 520)
-        self.wine, self.mono = 'wine', 'mono'
-        self.bprefix_path    = self.temp_prefix_path = None
-        self.exe_path        = self.exe_file = self.BepInEx_path = None
+        self.wine, self.mono = "wine", "mono"
+        self.bprefix_path, self.tprefix_path = None, None
+        self.exe_file, self.exe_path, self.BepInEx_path = None, None, None
 
         self.init_ui()
 
@@ -68,6 +46,8 @@ class WineLauncher(QWidget):
 
         chk_v.setContentsMargins( 1, 1, 1, 1)
         return chk_v
+
+    #--------------------------------------------------------------------------------------------------------------------
 
     def init_ui(self):
         v = QVBoxLayout()
@@ -109,28 +89,77 @@ class WineLauncher(QWidget):
 
     # GUI Part Done , Now For Connecting Methods Definition : --------------------------------------------------------------
 
-    def sel_exe(self):
-
-        exe_file, _ = QFileDialog.getOpenFileName(self, "Select G/Soft.exe", "", "Executable Files (*.exe)")
-        if not exe_file:    self.log.append("No executable selected.") ; return
-
-        self.log.append(f"💻Executable selected: {exe_file}")
-
-        self.exe_path = os.path.dirname(exe_file)
-        self.log.append(f"📂Executable path: {self.exe_path}")
-        
-        self.worker = BepInExPath_Searcher(self.exe_path)
-        self.worker.log_signal.connect(self.log.append)
-        self.worker.result_signal.connect(lambda path: (setattr(self, 'BepInEx_path', path),    self.log.append(f"✅ Saved BepInEx path: {self.BepInEx_path}")))
-        self.worker.start()
-
 
     def sel_bprefix(self):
 
-        self.bprefix_path = QFileDialog.getExistingDirectory(self, "Select Base Prefix Directory")
-        if not self.bprefix_path: self.log.append("No directory selected."); return
-        self.log.append(f"📂 Base Prefix selected: {self.bprefix_path}")
-        
+        self.bprefix_path = QFileDialog.getExistingDirectory(self, "Select Base Prefix Directory") 
+        if not self.bprefix_path : self.log.append("No BasePrefix Directory selected.")
+        else : self.log.append(f"📂 Base Prefix selected: {self.bprefix_path}\n")
+
+
+    def sel_exe(self):
+        exe_file, _ = QFileDialog.getOpenFileName(self, "Select G/Soft.exe", "", "Executable Files (*.exe)")
+    
+        if not exe_file:    self.log.append("❌ No executable selected.") ; return
+        else    :
+
+            self.exe_file = exe_file
+            self.log.append(f"💻 Executable selected: {self.exe_file}\n")
+
+            self.exe_path = os.path.dirname(exe_file)
+            self.log.append(f"📂 Executable path: {self.exe_path}")
+
+            self.tprefix_path = os.path.join(self.exe_path, ".wine_temp_noverlay", "merged")
+            if not self.tprefix_path : self.log.append(f"No Prefix Existing. ")
+            else : self.log.append(f"✅ Existing Prefix : {self.tprefix_path}")
+
+            for root, dirs, files in os.walk(self.exe_path):
+                if "BepInEx.dll" in files : self.BepInEx_path = os.path.join(root, "BepInEx.dll"); break
+            if self.BepInEx_path : self.log.append(f"✅ BepInEx.dll found at: {self.BepInEx_path}")
+
+
+    def on_modify_temp_changed(self, index):
+
+        temp_action = self.modify_temp.itemText(index)
+        self.log.append(f"\n\nTemp Prefix option selected: {temp_action}")
+
+        if  temp_action == "Create" :
+
+            self.log.append("Starting Wine Prefix creation...")
+            self.worker_thread = Prefix( num =3,  exe_path =self.exe_path,  bprefix_path =self.bprefix_path )
+
+            self.worker_thread.log.connect(self.log.append)
+            self.worker_thread.done.connect( lambda success:
+                self.log.append( "✅ Wine prefix created successfully!\n" if success else "❌ WPrefix creation failed.\n"))
+
+            self.worker_thread.start()
+
+        elif temp_action == "Delete" :
+            self.log.append("Starting Wine Prefix Deletion...")
+            self.worker_thread = Prefix( num =4,    exe_path=self.exe_path )
+
+            self.worker_thread.log.connect(self.log.append)
+            self.worker_thread.done.connect( lambda success:
+                self.log.append( "✅ Wine prefix deleted successfully!\n" if success else "❌ WPrefix deletion failed.\n"))
+
+            self.worker_thread.start()
+
+        else : pass 
+
+
+    def launchan(self):
+        self.log.append(f"Launching with exe_file: {self.exe_file}")  # Log exe_file value
+    
+        if not self.exe_file:    self.log.append("❌ Please select an executable file.")
+        elif :
+            self.log.append("Launch has been clicked")
+        else : pass
+
+
+
+
+                                        #------- Un Working Functions -------
+
 
     def on_resolution_changed(self, index):
 
@@ -143,31 +172,6 @@ class WineLauncher(QWidget):
         if state == Qt.Checked: self.log.append(f"{checkbox_label} is enabled.")
         else:                   self.log.append(f"{checkbox_label} is disabled.")
 
-
-    def on_modify_temp_changed(self, index):
-
-        temp_action = self.modify_temp.itemText(index)
-        self.log.append(f"\n\nTemp Prefix option selected: {temp_action}")
-
-        if  temp_action == "Create" :
-
-            self.log.append("Starting Wine Prefix creation...")
-            self.worker_thread = Prefix( num =3, exe_path=self.exe_path, bprefix_path=self.bprefix_path )
-            self.worker_thread.log.connect(self.log.append)
-            self.worker_thread.done.connect( lambda success:
-                self.log.append( "✅ Wine prefix created successfully!\n" if success else "❌ Wine prefix creation failed.\n"))
-            self.worker_thread.start()
-
-        elif temp_action == "Delete" :
-            self.log.append("Starting Wine Prefix Deletion...")
-            self.worker_thread = Prefix( num =4,    exe_path=self.exe_path )
-            self.worker_thread.log.connect( self.log.append )
-            self.worker_thread.done.connect( lambda success:
-                self.log.append("✅ Wine prefix deleted successfully!" if success else "❌ Wine prefix deletion failed."))
-            self.worker_thread.start()
-
-        else : pass 
-
     def on_modify_base_changed(self, index):
 
         base_option = self.modify_base.itemText(index)
@@ -175,6 +179,3 @@ class WineLauncher(QWidget):
 
         if   base_action == "Delete" :    self.log.append("Working On Deleting Existing BasePrefix")
         elif base_action == "Create" :    self.log.append("Working On Creating BasePrefix")
-        else : pass 
-
-    def launchan(self):    self.log.append("Launching EXE...")
