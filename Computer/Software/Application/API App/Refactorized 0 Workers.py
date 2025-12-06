@@ -38,7 +38,7 @@ class Prefix(QThread):
     def run(self):
         try:
             if self.num == 3:
-                ok = self._create_and_init()
+                ok = self._create_temp_prefix()
                 self.done.emit(bool(ok))
             elif self.num == 4:
                 ok = self._delete_temp_prefix()
@@ -52,7 +52,7 @@ class Prefix(QThread):
             self.done.emit(False)
 
     # ---- create + initialize ----
-    def _create_and_init(self):
+    def _create_temp_prefix(self):
         overlay_dir = self._create_overlay_dirs()
         if not overlay_dir: return False
 
