@@ -1,29 +1,41 @@
-
-import os, subprocess
+import os, time, subprocess
 from PyQt5.QtCore import QThread, pyqtSignal
+
+class CJob:
+    def __init__(self, num, path, obj_name):
+        self.num = num 
+        self.path = path ; self.obj_name = obj_name
+
+    def analyze(self):
+        """ Logically Analyze 'Obj_name', on given path( import OS ) """
+        full_path = os.path.join(self.path, self.obj_name)
+
+        if   self.num == 0 :    return os.path.isdir(full_path)
+        elif self.num == 1 :    return os.path.isfile(full_path)
+
 
 class Prefix(QThread):
     log = pyqtSignal(str) ; done = pyqtSignal(bool)
 
     def __init__(self, num, exe_path=None, bprefix_path=None):
         super().__init__()
-        self.num = num ; self.wine = 'wine'
-        self.bprefix_path = bprefix_path ; self.exe_path = exe_path
+        self.wine = "wine" ; self.num = num
+        self.bprefix_path = bprefix_path
+        self.exe_path = exe_path
 
     def run(self):
         if   self.num == 3:    self.create_temp_prefix()
         elif self.num == 4:    self.delete_temp_prefix()
-        else:    self.log.emit("❌ No Prefix Action Taken."); self.done.emit(False)
+        else:    self.log.emit("❌ No Prefix Action Taken.") ; self.done.emit(False)
+
 
 
     ### Temp Prefix Creation
     def create_temp_prefix(self):
 
         overlay_dir = self._create_overlay()
-
         if not overlay_dir:    self.done.emit(False); return
         if not self._initialize_wine_prefix(overlay_dir):    self.done.emit(False); return
-
         self.done.emit(True)
 
     def _create_overlay(self):
@@ -66,16 +78,19 @@ class Prefix(QThread):
             return True
         except subprocess.CalledProcessError as e:  self.log.emit(f"❌ Couldn't Initializable WPrefix: {e}"); return False
 
+
+
+
     ### Temp Prefix Deletion
     def delete_temp_prefix(self):
 
-        overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
-        merged_dir = os.path.join(overlay_dir, "merged")
+        overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay") ; merged_dir = os.path.join(overlay_dir, "merged")
 
         if not os.path.exists(overlay_dir):    self.log.emit("ℹ️ No Temp Prefix found."); return
 
         if not self._is_overlay_mounted(merged_dir):    self.log.emit(f"ℹ️ Overlay not mounted: {merged_dir}."); return
         self._unmount_and_delete(merged_dir, overlay_dir)
+
 
     def _is_overlay_mounted(self, merged_dir):
         result = subprocess.run(["mount"], check=True, capture_output=True, text=True)
@@ -88,9 +103,10 @@ class Prefix(QThread):
         try:
             subprocess.run(["pkexec", "bash", "-c", command], check=True, capture_output=True, text=True)
             self.log.emit("✅ Successfully Unmounted and Deleted.")
-        except subprocess.CalledProcessError as e:
-            self.log.emit(f"❌ Deletion failed with exit code {e.returncode}.") ; self.log.emit(f"❌ Error output: {e.stderr}")
+            self.done.emit(True)
 
+        except subprocess.CalledProcessError as e:
+            self.log.emit(f"❌ Deletion failed : {e.returncode}.") ; self.log.emit(f"❌ Error output: {e.stderr}"); self.done.emit(False)
 
 
 class RunAnalyze(QThread):
