@@ -151,9 +151,9 @@ class WineLauncher(QWidget):
         self.log.append(f"Launching with exe_file: {self.exe_file}")  # Log exe_file value
     
         if not self.exe_file:    self.log.append("❌ Please select an executable file.")
-        elif :
+        else :
             self.log.append("Launch has been clicked")
-        else : pass
+        return
 
 
 
