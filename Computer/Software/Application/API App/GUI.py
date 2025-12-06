@@ -148,17 +148,21 @@ class WineLauncher(QWidget):
 
 
     def launchan(self):
-        self.log.append(f"Launching with exe_file: {self.exe_file}")  # Log exe_file value
+        self.log.append("Launch clicked")
     
         if not self.exe_file:    self.log.append("❌ Please select an executable file.")
         else :
-            self.log.append("Launch has been clicked")
-        return
+            self.worker_thread = RunAnalyze( self.exe_path, self.exe_file, self.tprefix_path )
+
+            self.worker_thread.log.connect(self.log.append)
+            self.worker_thread.done.connect( lambda success:
+                self.log.append( "✅ Program Closed successfully!\n" if success else "❌ Program Couldn't Closed.\n"))
+
+            self.worker_thread.start()
 
 
 
-
-                                        #------- Un Working Functions -------
+              #------- Un Working Functions -------
 
 
     def on_resolution_changed(self, index):
@@ -179,3 +183,4 @@ class WineLauncher(QWidget):
 
         if   base_action == "Delete" :    self.log.append("Working On Deleting Existing BasePrefix")
         elif base_action == "Create" :    self.log.append("Working On Creating BasePrefix")
+        else : pass 
