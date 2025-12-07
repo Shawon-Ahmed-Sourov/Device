@@ -1,11 +1,13 @@
+# GUI.py
 import os
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QCheckBox, QLabel, QSpacerItem, QSizePolicy, QFrame, QTextEdit, QFileDialog
-from Workers import Prefix, RunAnalyze
-
 from PyQt5.QtCore import QThread, pyqtSignal
 
+from PyQt5.QtWidgets import QWidget, QLabel, QFrame, QMainWindow, QApplication, QHBoxLayout, QVBoxLayout
+from PyQt5.QtWidgets import QComboBox, QCheckBox, QTextEdit, QFileDialog, QPushButton, QSpacerItem, QSizePolicy
+
+from Workers1_1 import Prefix, RunAnalyze
 
 class WineLauncher(QWidget):
 
@@ -126,7 +128,7 @@ class WineLauncher(QWidget):
         if  temp_action == "Create" :
 
             self.log.append("Starting Wine Prefix creation...")
-            self.worker_thread = Prefix( num =3,  exe_path =self.exe_path,  bprefix_path =self.bprefix_path )
+            self.worker_thread = Prefix(num=3, exe_path=self.exe_path, bprefix_path=self.bprefix_path)
 
             self.worker_thread.log.connect(self.log.append)
             self.worker_thread.done.connect( lambda success:
@@ -184,3 +186,5 @@ class WineLauncher(QWidget):
         if   base_action == "Delete" :    self.log.append("Working On Deleting Existing BasePrefix")
         elif base_action == "Create" :    self.log.append("Working On Creating BasePrefix")
         else : pass 
+
+
