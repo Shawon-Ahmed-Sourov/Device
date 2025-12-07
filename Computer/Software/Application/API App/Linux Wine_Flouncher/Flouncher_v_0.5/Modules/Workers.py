@@ -172,6 +172,8 @@ class RunAnalyze(QThread):
     def _build_command(self):
         """Build the command to run the EXE."""
         env = {**os.environ, "WINEPREFIX": self.tprefix_path or "", "WINE_FULLSCREEN": "0", "WINEDEBUG": "+timestamp,+warn", "WINE_ALLOW_LARGE_ALLOCS": "1", "WINEESYNC": "1", "WINEFSYNC": "1", "WINEASYNC": "0"}
+
+        # Method name : Progmatically List-Based  shell-command-construction.
         cmd = [self.wine]
         if self.BepInExEx_dll:    cmd += ["mono", self.BepInExEx_dll]
         cmd += [self.exe_file]
