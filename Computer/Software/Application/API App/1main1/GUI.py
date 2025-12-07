@@ -1,5 +1,7 @@
 import os, subprocess
-from PyQt5.QtWidgets import QWidget, QPushButton, QLabel, QVBoxLayout, QFileDialog, QTextEdit, QHBoxLayout, QFrame, QCheckBox
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QFrame
+from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QPushButton, QCheckBox, QFileDialog, QTextEdit
+
 from Workers import InstallDllsWorker, TemprefixWorker, DeleteTempPrefixWorker, AnalyzeAndRunExeWorker
 
 class WineLauncher(QWidget):
@@ -54,9 +56,6 @@ class WineLauncher(QWidget):
         self.setLayout(v)
 
     # GUI Part Done , Now For Connecting Methods Definition : --------------------------------------------------------------
-    
-    def create_base(self):    self.log.append("⚡ Create a Base Prefix: Not yet implemented.")
-    def modify_base(self):    self.log.append("⚡ Cleaning and updating Base Prefix: Not yet implemented.")
 
     def sel_prefix(self):
         d = QFileDialog.getExistingDirectory(self, "Select Base Wine Prefix")
@@ -128,5 +127,8 @@ class WineLauncher(QWidget):
             self.worker.log.connect(self.log.append)
             self.worker.start()
 
+    def create_base(self):    self.log.append("⚡ Create a Base Prefix: Not yet implemented.")
+    def modify_base(self):    self.log.append("⚡ Cleaning and updating Base Prefix: Not yet implemented.")
+    
     def modify_temp(self):    self.log.append("⚡ Modify Temp Prefix: Not yet implemented.")    
     def sel_resolution(self):    self.log.append("⚡ Select The Resolution: Not yet implemented.")
