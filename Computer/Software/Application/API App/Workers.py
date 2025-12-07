@@ -1,4 +1,4 @@
-# Workers1_0.py
+# Workers.py
 import os, time, queue, shutil, threading, subprocess
 from PyQt5.QtCore import QThread, pyqtSignal
 
