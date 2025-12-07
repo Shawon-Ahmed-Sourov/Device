@@ -10,7 +10,7 @@ class InstallDllsWorker(QThread):
 
     def run(self):
         if shutil.which("winetricks") is None:
-            self.log.emit("❌ winetricks isn't Installed."); return
+            self.log.emit("❌ Please may install winetricks."); return
 
         self._start_winetricks()
 
@@ -59,7 +59,7 @@ class TemprefixWorker(QThread):
     
             self.log.emit(f"⚡ Using {fs_type} on {fs}.") ; subprocess.run(cmd, check=True)
             self.log.emit(f"✅ TPrefix created at {m}")
-            
+
         except subprocess.CalledProcessError as e: self.log.emit(f"❌ Overlay couldn't mount: {e}"); self.done.emit(False)
 
     def _initialize_tprefix(self, m):
@@ -131,14 +131,17 @@ class AnalyzeAndRunExeWorker(QThread):
         self.started_signal.emit(f"🚀 Launching EXE:\n$ {' '.join([f'{k}={v}' for k, v in env.items() if k.startswith('WINE')])} {' '.join(cmd)}")
 
         try:
-            proc = subprocess.Popen(cmd, env=env, cwd=os.path.dirname(self.exe), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+            proc = subprocess.Popen(cmd, env=env, cwd=os.path.dirname(self.exe),
+                                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
             self._monitor_proc_output(proc)
         except Exception as e:    self.log.emit(f"❌ Launch failed: {e}")
+
 
     def _monitor_proc_output(self, proc):
         q = queue.Queue()
         def reader_thread():
-            for line in iter(proc.stdout.readline, ''):    q.put(line.strip())
+            for line in iter(proc.stdout.readline, ''):
+                q.put(line.strip())
             proc.stdout.close()
 
         threading.Thread(target=reader_thread, daemon=True).start()
