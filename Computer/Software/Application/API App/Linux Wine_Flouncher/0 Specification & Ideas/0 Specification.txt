@@ -1,0 +1,3 @@
+* Software Name : Flouncher
+* Purpose: Raw Wine-Management-GUI ( ease of use, responsive )
+* shell cmd : /isolated-PREFIX-Dir  ( Uni+STBL)-env_flags  wine mono  /Path of mods.dll  /G-Soft-Path*.exe
