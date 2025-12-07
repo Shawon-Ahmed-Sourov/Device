@@ -1,0 +1,45 @@
+import os
+
+def _build_command(self, m, exe_file, dll_file):
+
+    """ Method name : Progmatically Dynamic shell command construction."""
+
+    ienv = { **os.environ, "WINEPREFIX": m }
+    senv = { 
+        "WINE_FULLSCREEN": "0",
+        "WINEDEBUG": "+timestamp,+warn",
+        "WINE_ALLOW_LARGE_ALLOCS": "1",
+        "WINEESYNC": "1", "WINEFSYNC": "1", "WINEASYNC": "0"
+    }
+
+    # Format the env-vars for shell compatibility
+    s_ienv = ' '.join(f'{k}="{v}"' if ' ' in v else f'{k}={v}' for k, v in ienv.items())
+    s_senv = ' '.join(f'{k}="{v}"' if ' ' in v else f'{k}={v}' for k, v in senv.items())
+
+    # Build the command string
+    cmd = f'{s_ienv} {s_senv} {self.wine} mono {self.dll_file} {self.exe_file}'
+
+    return cmd
+
+#------------------------------ OR 
+
+def _build_command( self, m ):
+
+    """ Method name : Progmatically List-Based  shell-command-construction."""
+
+    env1 = { **os.environ, "WINEPREFIX": m }
+    env2 = {
+        "WINE_FULLSCREEN": "0",
+        "WINEDEBUG": "+timestamp,+warn",
+        "WINE_ALLOW_LARGE_ALLOCS": "1",
+        "WINEESYNC": "1", "WINEFSYNC": "1", "WINEASYNC": "0"
+    }
+    merged_env = {**env1, **env2}   # Merge the env1,2 variables correctly
+
+    cmd = ["wine"]  # Command Starting Point as a list
+
+    if self.BepInEx_dll :    cmd += ["mono", self.BepInEx_dll]  # Correctly reference the DLL
+
+    cmd += [self.exe_file]  # Add the exe file
+
+    return cmd
