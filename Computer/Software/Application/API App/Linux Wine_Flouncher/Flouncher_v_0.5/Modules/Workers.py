@@ -106,24 +106,26 @@ class Prefix(QThread):
         return self._init_wine_temp_prefix(dirs["merged"])
 
     def _detect_fs(self, exe_path):
-        """Detect filesystem type."""
+        """Detect filesystem type with error handling."""
         try:
             out = run_command(["df", "-T", exe_path], capture_output=True, text=True).stdout
             fs_type = out.splitlines()[1].split()[1].lower()
             self.log.emit(f"Detected Filesystem: {fs_type}")
             return fs_type
-        except subprocess.CalledProcessError as e:    self.log.emit(f"❌ Un-Detectable FSystem: {e}") ; return "unknown"
+        except subprocess.CalledProcessError as e: self.log.emit(f"❌ Unable to detect filesystem: {e}") ; return "unknown"
 
     def _mount_overlay(self, fs_type, merged, overlay_dir):
-        """Mount the overlay filesystem."""
-        lower = self.bprefix_path
+        """Mount the overlay filesystem ensuring the base prefix is remain pure & read-only."""
+        lower = self.bprefix_path  # base Wine prefix (read-only)
         mount_cmd = []
 
-        if fs_type == "ext4" or fs_type == "xfs":  mount_cmd = ["pkexec", "mount", "-t", "overlay", "overlay",  "-o", f"lowerdir={lower},upperdir={overlay_dir}/upper,workdir={overlay_dir}/work", merged]
-        elif fs_type == "fuseblk":                 mount_cmd = ["fuse-overlayfs", "-o", f"lowerdir={lower},upperdir={overlay_dir}/upper,workdir={overlay_dir}/work", merged]
-        else:    self.log.emit(f"❌ Unsupported FSystem type: {fs_type}."); return False
+        if fs_type in ["ext4", "xfs"]:  # Using pkexec to mount with overlay
+            mount_cmd = ["pkexec", "mount", "-t", "overlay", "overlay",   "-o", f"lowerdir={lower},upperdir={overlay_dir}/upper,workdir={overlay_dir}/work", merged]
+        elif fs_type == "fuseblk":  # Using fuse-overlayfs for fuse filesystems
+            mount_cmd = ["fuse-overlayfs", "-o", f"lowerdir={lower},upperdir={overlay_dir}/upper,workdir={overlay_dir}/work", merged]
+        else:    self.log.emit(f"❌ Unsupported filesystem type: {fs_type}") ; return False
 
-        try:    run_command(mount_cmd); return True
+        try:    run_command(mount_cmd) ; return True
         except Exception as e:    self.log.emit(f"❌ Mount failed: {e}") ; return False
 
     def _init_wine_temp_prefix(self, merged):
