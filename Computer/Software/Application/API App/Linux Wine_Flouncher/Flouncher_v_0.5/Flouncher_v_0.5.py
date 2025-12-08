@@ -134,7 +134,7 @@ class Prefix(QThread):
             os.makedirs(os.path.join(merged, "drive_c", "windows"), exist_ok=True)
 
             # Step 2: Set up the Wine environment
-            env = {**os.environ, "WINEPREFIX": merged, "WINEDEBUG": "-all", "WINEUPDATE": "0", "WINEDLLOVERRIDES": "dll=ignore"}
+            env = {**os.environ, "WINEPREFIX": merged, "WINEDEBUG": "-all", "WINEUPDATE": "0", "WINEDLLOVERRIDES": "dll=ignore", "WINEPOLICY": "1" }
 
             # Step 3: Initialize the Wine prefix
             self.log.emit("⚡ Initializing Wine Prefix...")
