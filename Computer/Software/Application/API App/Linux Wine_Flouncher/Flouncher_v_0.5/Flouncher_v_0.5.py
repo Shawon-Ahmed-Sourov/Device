@@ -107,7 +107,7 @@ class Prefix(QThread):
     def _detect_fs(self, exe_path):
         """Detect filesystem type with error handling."""
         try:
-            out = run_command(["df", "-T", exe_path], capture_output=True, text=True).stdout
+            out = run_command(["df", "-T", exe_path], capture_output=True, text=True, check=True).stdout
             fs_type = out.splitlines()[1].split()[1].lower()
             self.log.emit(f"Detected Filesystem: {fs_type}")
             return fs_type
