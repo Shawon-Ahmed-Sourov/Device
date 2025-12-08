@@ -97,7 +97,7 @@ class Prefix(QThread):
         overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
         dirs = {p: os.path.join(overlay_dir, p) for p in ("upper", "work", "merged")}
 
-        if not ensure_dirs_exist(dirs.values()): self.log.emit(f"❌ Couldn't prepare overlay dirs.") ; return False
+        if not self.ensure_dirs_exist(dirs.values()): self.log.emit(f"❌ Couldn't prepare overlay dirs.") ; return False
 
         fs_type = self._detect_fs(self.exe_path)
 
