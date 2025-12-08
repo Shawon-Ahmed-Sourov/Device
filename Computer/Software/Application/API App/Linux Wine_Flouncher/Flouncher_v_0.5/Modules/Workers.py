@@ -90,7 +90,6 @@ class Prefix(QThread):
         except Exception as e:    self.log.emit(f"⚠️ Error while Unmounting or Deletion: {e}") ; return False
 
 
-
     def _create_temp_prefix(self):
         """Create a temporary Wine prefix."""
         if not self.exe_path or not self.bprefix_path:    self.log.emit("❌ No Path of exe or BPrefix.") ; return False
@@ -135,11 +134,11 @@ class Prefix(QThread):
             os.makedirs(os.path.join(merged, "drive_c", "windows"), exist_ok=True)
 
             # Step 2: Set up the Wine environment
-            env = {**os.environ, "WINEPREFIX": merged, "WINEDEBUG": "-all", "WINEUPDATE": "0", "WINEDLLOVERRIDES": "dll=ignore", "WINEPOLICY": "1" }
+            env = {**os.environ, "WINEPREFIX": merged, "WINEDEBUG": "-all", "WINEUPDATE": "0", "WINEDLLOVERRIDES": "dll=ignore", "WINEPOLICY": "1"}
         
             # Step 3: Initialize the Wine prefix
             self.log.emit("⚡ Initializing Wine Prefix...")
-            run_command([self.wine, "winecfg"], env=env, cwd=os.path.dirname(self.exe_path), check=True)
+            run_command([self.wine, "wineboot"], env=env, cwd=os.path.dirname(self.exe_path), check=True)
 
             # Step 4: Check for the Wine version in the registry
             reg_check = run_command([self.wine, "reg", "query", "HKCU\\Software\\Wine\\Wine\\Config", "/v", "Version"], env=env, capture_output=True)
