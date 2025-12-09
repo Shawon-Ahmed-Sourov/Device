@@ -206,7 +206,6 @@ class RunAnalyze(QThread):
                             if ".dll" in line.lower() and any(x in line.lower() for x in ("not found", "cannot", "error")):    missing.add(line.split()[0].lower())
                         if proc.poll() is not None:    break
                 except OSError:    break
-
         finally:
             os.close(master_fd)
             if missing:     # Handle missing DLLs
