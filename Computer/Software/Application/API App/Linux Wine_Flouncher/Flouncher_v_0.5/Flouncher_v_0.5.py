@@ -1,5 +1,5 @@
 # Date : 5 Dec 2025
-import os, sys, time, queue, shutil, threading, subprocess
+import os, pty, sys, time, queue, shutil, threading, subprocess
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
 from PyQt5.QtWidgets import QWidget, QLabel, QFrame, QMainWindow, QApplication, QHBoxLayout, QVBoxLayout
@@ -179,34 +179,41 @@ class RunAnalyze(QThread):
         cmd += [self.exe_file]
         return cmd, env
 
-    def _launch_exe(self, cmd, env):
-        """Launch the EXE."""
-        self.log.emit(f"🚀 Launching EXE: {' '.join(cmd)}")
+    def _launch_exe(self, cmd, env):    # Launch by PTY to avoid EBADF error.( import os,pty )
+        self.log.emit(f"Launching EXE: {' '.join(cmd)}")
         try:
-            proc = subprocess.Popen(cmd, env=env, cwd=os.path.dirname(self.exe_file), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-            self._monitor_proc(proc)
+            master_fd, slave_fd = pty.openpty()  # Create Pseudo-Terminal
+            proc = subprocess.Popen(
+                cmd, env=env, cwd=os.path.dirname(self.exe_file),
+                stdin=slave_fd, stdout=slave_fd, stderr=slave_fd,
+                text=True, bufsize=1, close_fds=True
+            )
+            os.close(slave_fd)
+            self._monitor_pty(proc, master_fd)
         except Exception as e:    self.log.emit(f"❌ Launch failed: {e}"); self.done.emit(False)
 
-    def _monitor_proc(self, proc):
-        """Monitor the process and handle output."""
-        q = queue.Queue()
-        threading.Thread(target=lambda: [q.put(line.rstrip()) for line in iter(proc.stdout.readline, '')] and proc.stdout.close(), daemon=True).start()
-        missing = set()
-        while proc.poll() is None or not q.empty():
-            try:
-                line = q.get(timeout=0.1)
-                if not line:    continue
-                self.log.emit(line)
-                if ".dll" in line.lower() and any(x in line.lower() for x in ("not found", "cannot", "error")):
-                    missing.add(line.split()[0].lower())
-            except queue.Empty:    pass
-
-        if missing:
-            with open(os.path.join(os.path.dirname(self.exe_file), "Analyzable-logs.txt"), "w") as f:
-                f.write("\n".join(sorted(missing)))
-            self.log.emit(f"❗ Missing DLLs: {', '.join(sorted(missing))}")
-        else:    self.log.emit("✅ No missing DLLs detected.")
-        self.done.emit(proc.returncode == 0)
+    def _monitor_pty(self, proc, master_fd):    # Monitor the PTY and process output.
+        missing = set()  # For missing DLLs
+        try:
+            while True:
+                try:
+                    data = os.read(master_fd, 1024).decode(errors="ignore")
+                    if data:
+                        for line in data.splitlines():
+                            self.log.emit(line)
+                                                # Check for missing DLLs in output
+                            if ".dll" in line.lower() and any(x in line.lower() for x in ("not found", "cannot", "error")):    missing.add(line.split()[0].lower())
+                        if proc.poll() is not None:    break
+                except OSError:    break
+        finally:
+            os.close(master_fd)
+            if missing:     # Handle missing DLLs
+                with open(os.path.join( os.path.dirname( self.exe_file ), "Analyzable-logs.txt"), "w") as f:
+                    f.write( "\n".join(sorted ( missing ) ) )
+                self.log.emit( f"❗ Missing DLLs: {', '.join( sorted( missing ) ) }" )
+            else:    self.log.emit( "✅ No missing DLLs detected." )
+        
+            self.done.emit(proc.returncode == 0)
 
 # -------------------------
 # GUI Class for PyQt
