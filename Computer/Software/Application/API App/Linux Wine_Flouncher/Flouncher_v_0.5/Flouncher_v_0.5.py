@@ -192,27 +192,25 @@ class RunAnalyze(QThread):
             self._monitor_pty(proc, master_fd)
         except Exception as e:    self.log.emit(f"❌ Launch failed: {e}"); self.done.emit(False)
 
-    def _monitor_pty(self, proc, master_fd):    # Monitor the PTY and process output.
-        missing = set()  # For missing DLLs
+    def _monitor_pty(self, proc, master_fd):
+        missing = set()
         try:
             while True:
                 try:
-                    data = os.read(master_fd, 1024).decode(errors="ignore")
-                    if data:
-                        for line in data.splitlines():
-                            self.log.emit(line)
-                                                # Check for missing DLLs in output
-                            if ".dll" in line.lower() and any(x in line.lower() for x in ("not found", "cannot", "error")):    missing.add(line.split()[0].lower())
-                        if proc.poll() is not None:    break
-                except OSError:    break
+                    for line in os.read(master_fd, 1024).decode(errors="ignore").splitlines():
+                        self.log.emit(line)
+                        low = line.lower()
+                        if ".dll" in low and any(x in low for x in ("not found", "cannot", "error")):
+                            missing.add(line.split()[0].lower())
+                except OSError: break
+                if proc.poll() is not None:    self.log.emit(f"Wine process {proc.pid} exited with code {proc.returncode}"); break
         finally:
             os.close(master_fd)
-            if missing:     # Handle missing DLLs
-                with open(os.path.join( os.path.dirname( self.exe_file ), "Analyzable-logs.txt"), "w") as f:
-                    f.write( "\n".join(sorted ( missing ) ) )
-                self.log.emit( f"❗ Missing DLLs: {', '.join( sorted( missing ) ) }" )
-            else:    self.log.emit( "✅ No missing DLLs detected." )
-        
+            if missing:
+                path = os.path.join(os.path.dirname(self.exe_file), "Analyzable-logs.txt")
+                with open(path, "w") as f: f.write("\n".join(sorted(missing)))
+                self.log.emit(f"❗ Missing DLLs: {', '.join(sorted(missing))}")
+            else:   self.log.emit("✅ No missing DLLs detected.")
             self.done.emit(proc.returncode == 0)
 
 # -------------------------
