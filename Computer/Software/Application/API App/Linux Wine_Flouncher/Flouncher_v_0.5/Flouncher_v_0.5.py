@@ -50,10 +50,32 @@ class Prefix(QThread):
 
     def run(self):
         try:
-            if   self.num == 3:    self.done.emit(self._create_temp_prefix())
-            elif self.num == 4:    self.done.emit(self._delete_temp_prefix())
-            else:    self.log.emit("❌ Invalid operation number.") ; self.done.emit(False)
-        except Exception as e:    self.log.emit(f"❌ Prefix thread error: {e}") ; self.done.emit(False)
+            if     self.num == 1:    self.done.emit(self._create_base_prefix())
+            elif   self.num == 3:    self.done.emit(self._create_temp_prefix())
+            elif   self.num == 4:    self.done.emit(self._delete_temp_prefix())
+            else:  self.log.emit("❌ Invalid operation number.") ; self.done.emit(False)
+        except Exception as e:     self.log.emit(f"❌ Prefix thread error: {e}") ; self.done.emit(False)
+
+
+    def _create_base_prefix(self):
+        try:
+            prefix_dir = self.bprefix_path or os.path.join(self.base_dir, "BasePrefix")
+
+            self.log.emit(f"📂 Trying to create directory: {prefix_dir}")
+
+            os.makedirs(prefix_dir, exist_ok=True)
+
+            if os.path.exists(prefix_dir):    self.log.emit(f"✅ Successfully created prefix directory at: {prefix_dir}")
+            else:    self.log.emit(f"❌ Directory creation failed for: {prefix_dir}")
+
+            # Properly escaping spaces in the directory path
+            command = f'mkdir -p "{prefix_dir}" && WINEARCH=win64 WINEPREFIX="{prefix_dir}" wineboot -q &>/dev/null && WINEPREFIX="{prefix_dir}" wine reg add "HKCU\\Software\\Wine\\Wine\\Config" /v "Version" /d "10.0" /f &>/dev/null && WINEPREFIX="{prefix_dir}" winecfg'
+            self.log.emit(f"Running command: {command}")
+            result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            if result.returncode == 0:    self.log.emit(f"✅ Successfully created base prefix in {prefix_dir}."); return True
+            else:    self.log.emit(f"❌ Error creating base prefix: {result.stderr.decode()}"); return False
+        except Exception as e:    self.log.emit(f"❌ Error in _create_base_prefix: {e}") ; return False
 
     def _delete_temp_prefix(self):
         """Delete the temporary Wine prefix."""
