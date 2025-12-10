@@ -1,9 +1,12 @@
 * Modules files are for Developer / Maintainer
 * user may use One single file of python named "Flouncher_version.py"
 
-* Dependencies :
+# Required Dependencies :
 > Wine Api : https://gitlab.winehq.org/wine/wine/-/wikis/Download ; winetricks( to install dlls), 
 > Python3, PyQt5
+
+
+# Now Lets see How you can run *exe in linux : 
 
 1. BasePrefix Option DropDown Menu -> Create BasePrefix( Right Now you might install different dlls by terminal )
 
