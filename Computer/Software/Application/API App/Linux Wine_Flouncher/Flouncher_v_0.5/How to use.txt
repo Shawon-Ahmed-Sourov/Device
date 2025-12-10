@@ -8,7 +8,10 @@
 
 # Now Lets see How you can run *exe in linux : 
 
-1. BasePrefix Option DropDown Menu -> Create BasePrefix( Right Now you might install different dlls by terminal )
+1. BasePrefix Option DropDown Menu -> Create BasePrefix( Right Now you might install different dlls by terminal as your specific software requires )
+    ? how ? to install dlls :
+    > open Terminal where the BasePrefix Located
+    > $ WINEPREFIX=~/BasePrefix winetricks vcrun2012 dotnet40 dxdiag others-dlls-name
 
 2. Select BasePrefix Option -> Select The BasePrefix you've created & updated
 3. Select G-Soft.exe Button : Select Windows Native Executable File
