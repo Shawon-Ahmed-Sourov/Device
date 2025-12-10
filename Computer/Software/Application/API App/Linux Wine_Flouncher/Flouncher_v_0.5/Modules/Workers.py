@@ -76,7 +76,6 @@ class Prefix(QThread):
             else:    self.log.emit(f"❌ Error creating base prefix: {result.stderr.decode()}"); return False
         except Exception as e:    self.log.emit(f"❌ Error in _create_base_prefix: {e}") ; return False
 
-
     def _delete_temp_prefix(self):
         """Delete the temporary Wine prefix."""
         overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
