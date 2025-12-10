@@ -42,11 +42,12 @@ class Prefix(QThread):
 
     log = pyqtSignal(str) ; done = pyqtSignal(bool)
 
-    def __init__(self, num: int, exe_path, bprefix_path=None):
+    def __init__(self, num: int, exe_path, bprefix_path=None, base_dir=None ):
         super().__init__()
-        self.wine = "wine"
         self.num = num
         self.exe_path = exe_path ; self.bprefix_path = bprefix_path
+        self.base_dir = base_dir or os.path.dirname(os.path.abspath(__file__))
+        self.wine = "wine"
 
     def run(self):
         try:
@@ -76,6 +77,7 @@ class Prefix(QThread):
             if result.returncode == 0:    self.log.emit(f"✅ Successfully created base prefix in {prefix_dir}."); return True
             else:    self.log.emit(f"❌ Error creating base prefix: {result.stderr.decode()}"); return False
         except Exception as e:    self.log.emit(f"❌ Error in _create_base_prefix: {e}") ; return False
+
 
     def _delete_temp_prefix(self):
         """Delete the temporary Wine prefix."""
