@@ -1,4 +1,5 @@
 # Date : 5 Dec 2025
+# Date : 5 Dec 2025
 import os, pty, sys, time, queue, shutil, threading, subprocess
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
@@ -108,19 +109,19 @@ class Prefix(QThread):
 
             # Check if the overlay directory is removed
             if not os.path.exists(overlay_dir):    self.log.emit("✅ Overlay Directory removed.") ; return True
-            else:    self.log.emit(f"❌ Failed to remove Directory: {overlay_dir}")				  ; return False
+            else:    self.log.emit(f"❌ Failed to remove Directory: {overlay_dir}") ; return False
 
-        except Exception as e:    self.log.emit(f"⚠️ Error while Unmounting or Deletion: {e}")    ; return False
+        except Exception as e:    self.log.emit(f"⚠️ Error while Unmounting or Deletion: {e}") ; return False
 
 
     def _create_temp_prefix(self):
         """Create a temporary Wine prefix."""
-        if not self.exe_path or not self.bprefix_path: self.log.emit("❌ No Path of exe or BPrefix."); return False
+        if not self.exe_path or not self.bprefix_path:    self.log.emit("❌ No Path of exe or BPrefix.") ; return False
 
         overlay_dir = os.path.join(self.exe_path, ".wine_temp_noverlay")
         dirs = {p: os.path.join(overlay_dir, p) for p in ("upper", "work", "merged")}
 
-        if not ensure_dirs_exist(dirs.values()): self.log.emit(f"❌ Couldn't prepare overlay dirs.") ; return False
+        if not ensure_dirs_exist(dirs.values()):    self.log.emit(f"❌ Couldn't prepare overlay dirs.") ; return False
 
         fs_type = self._detect_fs(self.exe_path)
 
@@ -183,22 +184,21 @@ class RunAnalyze(QThread):
 
     log = pyqtSignal(str) ; done = pyqtSignal(bool)
 
-    def __init__(self, exe_path, exe_file, tprefix_path=None, BepInEx_dll=None):
+    def __init__(self, exe_path, exe_file, tprefix_path=None, BepInEx_dll=None ):
         super().__init__()
-        self.tprefix_path = tprefix_path
-        self.wine = "wine" ; self.BepInExEx_dll = BepInEx_dll ; self.exe_file = exe_file
+        self.tprefix_path = tprefix_path ; self.wine = "wine" ; self.exe_file = exe_file
+        self.BepInExEx_dll = BepInEx_dll
 
     def run(self):
         try:
             cmd, env = self._build_command()
             self._launch_exe(cmd, env)
-        except Exception as e:    self.log.emit(f"❌ Run error: {e}"); self.done.emit(False)
+        except Exception as e:    self.log.emit(f"❌ Run error: {e}") ; self.done.emit(False)
 
     def _build_command(self):
-        
+        """Build the command to run the EXE."""
         env = {**os.environ, "WINEPREFIX": self.tprefix_path or "", "WINE_FULLSCREEN": "0", "WINEDEBUG": "+timestamp,+warn", "WINE_ALLOW_LARGE_ALLOCS": "1", "WINEESYNC": "1", "WINEFSYNC": "1", "WINEASYNC": "0"}
-
-        cmd = [self.wine] # Method name : Progmatically List-Based  shell-command-construction.
+        cmd = [self.wine]
         if self.BepInExEx_dll:    cmd += ["mono", self.BepInExEx_dll]
         cmd += [self.exe_file]
         return cmd, env
@@ -227,7 +227,9 @@ class RunAnalyze(QThread):
                         if ".dll" in low and any(x in low for x in ("not found", "cannot", "error")):
                             missing.add(line.split()[0].lower())
                 except OSError: break
-                if proc.poll() is not None:    self.log.emit(f"Wine process {proc.pid} exited with code {proc.returncode}"); break
+
+                if proc.poll() is not None:
+                    self.log.emit(f"Wine process {proc.pid} exited with code {proc.returncode}"); break
         finally:
             os.close(master_fd)
             if missing:
@@ -236,6 +238,26 @@ class RunAnalyze(QThread):
                 self.log.emit(f"❗ Missing DLLs: {', '.join(sorted(missing))}")
             else:   self.log.emit("✅ No missing DLLs detected.")
             self.done.emit(proc.returncode == 0)
+
+# -------------------------
+# Winetricks Launcher
+# -------------------------
+class InstallDllsWorker(QThread):
+    log = pyqtSignal(str)
+
+    def __init__(self, base, wine_cmd="wine"):
+        super().__init__()
+        self.base = base ; self.wine = wine_cmd
+
+    def run(self):
+        if shutil.which("winetricks") is None:    self.log.emit("❌ winetricks isn't installed.") ; return
+
+        try:
+            self.log.emit("⚡ Launching Winetricks...")
+            subprocess.Popen(["winetricks"], env={**os.environ, "WINEPREFIX": self.base})
+            self.log.emit(f"✅ Tip: $ WINEPREFIX={self.base} winetricks")
+        except Exception as e:    self.log.emit(f"❌ Failed to start winetricks: {e}")
+
 
 # -------------------------
 # GUI Class for PyQt
@@ -423,7 +445,9 @@ class WineLauncher(QWidget):
 
             self.worker_thread.start()
 
+
               #------- Un Working Functions -------
+
 
     def on_resolution_changed(self, index):
 
