@@ -95,8 +95,8 @@ class WineLauncher(QWidget):
     def sel_bprefix(self):
 
         self.bprefix_path = QFileDialog.getExistingDirectory(self, "Select Base Prefix Directory") 
-        if not self.bprefix_path : self.log.append("No BasePrefix Directory selected.")
-        else : self.log.append(f"📂 Base Prefix selected: {self.bprefix_path}\n")
+        if not self.bprefix_path:   self.log.append("No BasePrefix Directory selected.")
+        else:  self.log.append(f"📂 Base Prefix selected: {self.bprefix_path}\n")
 
 
     def sel_exe(self):
@@ -113,11 +113,40 @@ class WineLauncher(QWidget):
 
             self.tprefix_path = os.path.join(self.exe_path, ".wine_temp_noverlay", "merged")
             if not self.tprefix_path : self.log.append(f"No Prefix Existing. ")
-            else : self.log.append(f"✅ Existing Prefix : {self.tprefix_path}")
+            else :                     self.log.append(f"✅ Existing Prefix : {self.tprefix_path}")
 
             for root, dirs, files in os.walk(self.exe_path):
                 if "BepInEx.dll" in files : self.BepInEx_path = os.path.join(root, "BepInEx.dll"); break
             if self.BepInEx_path : self.log.append(f"✅ BepInEx.dll found at: {self.BepInEx_path}")
+
+
+    def on_modify_base_changed(self, index):
+        base_option = self.modify_base.itemText(index)
+        self.log.append(f"Base Prefix option selected: {base_option}")
+
+        if base_option == "Delete":
+            self.log.append("Working On Deleting Existing BasePrefix")
+        elif base_option == "Create Base Prefix":
+            self.log.append("Preparing to create BasePrefix...")
+
+            # Add logging to confirm worker creation
+            self.log.append("Starting the Prefix worker thread...")
+
+            # Pass the base_dir explicitly if needed
+            self.worker_thread = Prefix(num=1, exe_path=self.exe_path, base_dir=os.path.dirname(os.path.abspath(__file__)))
+
+            # Connect signals
+            self.worker_thread.log.connect(self.log.append)
+            self.worker_thread.done.connect(
+                lambda success: self.log.append(
+                    "✅ BasePrefix Created! \n" if success else "❌ BasePrefix creation failed.\n"
+                )
+            )
+
+            # Start the thread and add log
+            self.log.append("Starting worker thread now...")
+            self.worker_thread.start()
+        else:    pass
 
 
     def on_modify_temp_changed(self, index):
@@ -163,7 +192,6 @@ class WineLauncher(QWidget):
             self.worker_thread.start()
 
 
-
               #------- Un Working Functions -------
 
 
@@ -178,13 +206,5 @@ class WineLauncher(QWidget):
         if state == Qt.Checked: self.log.append(f"{checkbox_label} is enabled.")
         else:                   self.log.append(f"{checkbox_label} is disabled.")
 
-    def on_modify_base_changed(self, index):
-
-        base_option = self.modify_base.itemText(index)
-        self.log.append(f"Base Prefix option selected: {base_option}")
-
-        if   base_action == "Delete" :    self.log.append("Working On Deleting Existing BasePrefix")
-        elif base_action == "Create" :    self.log.append("Working On Creating BasePrefix")
-        else : pass 
 
 
