@@ -1,3 +1,6 @@
+* Modules files are for Developer / Maintainer
+* user may use One single file of python named "Flouncher_version.py"
+
 1. BasePrefix Option DropDown Menu -> Create BasePrefix( Right Now you might install different dlls by terminal )
 
 2. Select BasePrefix Option -> Select The BasePrefix you've created & updated
