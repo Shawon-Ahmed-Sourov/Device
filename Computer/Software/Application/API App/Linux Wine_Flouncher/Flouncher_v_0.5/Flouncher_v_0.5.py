@@ -266,7 +266,7 @@ class WineLauncher(QWidget):
 
     def __init__(self): 
         super().__init__()
-        self.setWindowTitle("Wine EXE Launcher")
+        self.setWindowTitle("Flouncher_v_0.5")
         self.resize(920, 520)
         self.wine, self.mono = "wine", "mono"
         self.bprefix_path, self.tprefix_path = None, None
