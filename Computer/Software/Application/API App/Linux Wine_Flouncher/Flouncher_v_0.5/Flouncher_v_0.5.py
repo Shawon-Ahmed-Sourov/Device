@@ -180,63 +180,54 @@ class Prefix(QThread):
 # -------------------------
 
 class RunAnalyze(QThread):
-
+    
     log = pyqtSignal(str) ; done = pyqtSignal(bool)
 
-    def __init__(self, exe_path, exe_file, tprefix_path=None, BepInEx_dll=None ):
+    def __init__(self, exe_path, exe_file, tprefix_path=None, BepInEx_dll=None):
         super().__init__()
-        self.tprefix_path = tprefix_path ; self.wine = "wine" ; self.exe_file = exe_file
-        self.BepInExEx_dll = BepInEx_dll
+        self.wine = "wine"
+        self.tprefix_path, self.BepInExEx_dll, self.exe_file = tprefix_path, BepInEx_dll, exe_file
 
     def run(self):
+        """Run the EXE in the background thread."""
         try:
             cmd, env = self._build_command()
             self._launch_exe(cmd, env)
-        except Exception as e:    self.log.emit(f"❌ Run error: {e}") ; self.done.emit(False)
+        except Exception as e:    self.log.emit(f"❌ Run error: {e}"); self.done.emit(False)
 
     def _build_command(self):
-        """Build the command to run the EXE."""
-        env = {**os.environ, "WINEPREFIX": self.tprefix_path or "", "WINE_FULLSCREEN": "0", "WINEDEBUG": "+timestamp,+warn", "WINE_ALLOW_LARGE_ALLOCS": "1", "WINEESYNC": "1", "WINEFSYNC": "1", "WINEASYNC": "0"}
+
+        env = {**os.environ, "WINEPREFIX": self.tprefix_path or "", "WINE_FULLSCREEN": "0", "WINEDEBUG": "+timestamp,+warn","WINEESYNC": "1", "WINEFSYNC": "1", "WINEASYNC": "0"}
         cmd = [self.wine]
         if self.BepInExEx_dll:    cmd += ["mono", self.BepInExEx_dll]
         cmd += [self.exe_file]
         return cmd, env
 
-    def _launch_exe(self, cmd, env):    # Launch by PTY to avoid EBADF error.( import os,pty )
+    def _launch_exe(self, cmd, env):
+
         self.log.emit(f"Launching EXE: {' '.join(cmd)}")
         try:
-            master_fd, slave_fd = pty.openpty()  # Create Pseudo-Terminal
-            proc = subprocess.Popen(
-                cmd, env=env, cwd=os.path.dirname(self.exe_file),
-                stdin=slave_fd, stdout=slave_fd, stderr=slave_fd,
-                text=True, bufsize=1, close_fds=True
-            )
-            os.close(slave_fd)
+            master_fd, slave_fd = pty.openpty()  # Create Pseudo-Terminal to manage the process IO
+
+            # Start the process in the background
+            proc = subprocess.Popen( cmd, env=env, cwd=os.path.dirname(self.exe_file), stdin=slave_fd, stdout=slave_fd, stderr=slave_fd, text=True, bufsize=1, close_fds=True)
+
+            os.close(slave_fd)  # Close the slave file descriptor after process start
             self._monitor_pty(proc, master_fd)
+
         except Exception as e:    self.log.emit(f"❌ Launch failed: {e}"); self.done.emit(False)
 
-    def _monitor_pty(self, proc, master_fd):
-        missing = set()
+    def _monitor_pty(self, proc, master_fd): # Monitor the process output and handle errors.
         try:
             while True:
                 try:
-                    for line in os.read(master_fd, 1024).decode(errors="ignore").splitlines():
-                        self.log.emit(line)
-                        low = line.lower()
-                        if ".dll" in low and any(x in low for x in ("not found", "cannot", "error")):
-                            missing.add(line.split()[0].lower())
-                except OSError: break
+                    # Read the output from the process
+                    for line in os.read(master_fd, 1024).decode(errors="ignore").splitlines():    self.log.emit(line)
 
-                if proc.poll() is not None:
-                    self.log.emit(f"Wine process {proc.pid} exited with code {proc.returncode}"); break
-        finally:
-            os.close(master_fd)
-            if missing:
-                path = os.path.join(os.path.dirname(self.exe_file), "Analyzable-logs.txt")
-                with open(path, "w") as f: f.write("\n".join(sorted(missing)))
-                self.log.emit(f"❗ Missing DLLs: {', '.join(sorted(missing))}")
-            else:   self.log.emit("✅ No missing DLLs detected.")
-            self.done.emit(proc.returncode == 0)
+                except OSError:    break  # Exit if reading fails
+
+                if proc.poll() is not None: self.log.emit(f"Wine process {proc.pid} exited with code {proc.returncode}"); break
+        finally:    os.close(master_fd); if proc.poll() is None: proc.kill(); self.done.emit(proc.returncode == 0)
 
 # -------------------------
 # Winetricks Launcher
