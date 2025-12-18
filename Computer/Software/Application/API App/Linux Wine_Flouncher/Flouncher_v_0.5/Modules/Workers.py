@@ -225,9 +225,7 @@ class RunAnalyze(QThread):
                 except OSError:    break  # Exit if reading fails
 
                 if proc.poll() is not None: self.log.emit(f"Wine process {proc.pid} exited with code {proc.returncode}"); break
-
-        finally:    os.close(master_fd) ; self.done.emit(proc.returncode == 0)  # Emit completion signal with success/failure
-
+        finally:    os.close(master_fd); if proc.poll() is None: proc.kill(); self.done.emit(proc.returncode == 0)
 
 # -------------------------
 # Winetricks Launcher
