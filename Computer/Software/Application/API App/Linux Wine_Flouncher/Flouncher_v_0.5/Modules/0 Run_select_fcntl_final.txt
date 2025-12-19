@@ -1,0 +1,87 @@
+import os, pty, subprocess, select, fcntl, time
+from PyQt5.QtCore import QThread, pyqtSignal
+
+class RunAnalyze(QThread):
+    log = pyqtSignal(str); done = pyqtSignal(bool)
+
+    def __init__(self, exe_path, exe_file, tprefix_path=None, BepInEx_dll=None):
+        super().__init__()
+        self.wine, self.tprefix_path, self.BepInEx_dll, self.exe_file = "wine", tprefix_path, BepInEx_dll, exe_file
+
+    def run(self):
+        cmd, env = self._build_command()
+        # Open PTY: This natively handles unbuffering better than stdbuf for Wine
+        m_fd, s_fd = pty.openpty()
+        
+        # Set Non-Blocking I/O
+        flags = fcntl.fcntl(m_fd, fcntl.F_GETFL)
+        fcntl.fcntl(m_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+        try:
+            self.proc = subprocess.Popen( cmd, env=env, cwd=os.path.dirname(self.exe_file),
+                                          stdin=s_fd, stdout=s_fd, stderr=s_fd, preexec_fn=os.setsid, pass_fds=(s_fd,) )
+            os.close(s_fd) # Close slave in parent immediately
+
+            self._monitor_waterflow(m_fd)
+            self.done.emit(self.proc.poll() == 0)
+
+        except Exception as e:    self.log.emit(f"❌ Critical Error: {e}"); self.done.emit(False)
+        finally:
+            try: os.close(m_fd)
+            except: pass
+
+    def _monitor_waterflow(self, m_fd):    # Ultra-fast non-blocking accumulator.
+        acc = []; last_emit = time.time()
+        
+        while self.proc.poll() is None:    # Shortest possible timeout to keep CPU free for the game
+            r, _, _ = select.select([m_fd], [], [], 0.005)
+            
+            if r:
+                try:    # Read in huge 64KB blocks to keep the pipe clear
+                    data = os.read(m_fd, 65536).decode(errors="ignore")
+                    if data: acc.append(data)
+                except (BlockingIOError, OSError): pass
+
+            # THE WATER FLOW SYNC: 60 updates per second (16ms)
+            now = time.time()
+            if acc and (now - last_emit > 0.016):    # We use .strip() to avoid empty trailing lines, but keep flow
+                self.log.emit("".join(acc))
+                acc, last_emit = [], now
+
+        if acc: self.log.emit("".join(acc)) # Final check for remaining logs
+
+    def _build_command(self):
+        env = { **os.environ,"WINEPREFIX": self.tprefix_path or "",
+                "PYTHONUNBUFFERED": "1", "WINE_STDOUT_LINE_BUFFERED": "1",
+                "WINEESYNC": "1","WINEFSYNC": "1", "WINEDBG": "none","WINEDEBUG": "-all", # Absolute maximum speed 
+            }
+
+        is_vulkan = False # 1. Check if DXVK/VKD3D is being used in this prefix, Otherwise the overridden dlls
+        if self.tprefix_path:
+            sys32 = os.path.join(self.tprefix_path, "drive_c", "windows", "system32")
+            # If dxgi.dll or d3d11.dll are present as symlinks/files in the prefix
+            if os.path.exists(os.path.join(sys32, "dxvk.conf")) or os.path.exists(os.path.join(sys32, "d3d11.dll")):
+                is_vulkan = True
+
+        # 2. Hardware-Specific "Best of Best" Tuning
+        try:
+            gpu_info = subprocess.check_output(["lspci"], text=True).lower()
+        
+            if "nvidia" in gpu_info:
+                env["__GL_THREADED_OPTIMIZATIONS"] = "1"
+                if is_vulkan:
+                    env["__NV_PRIME_RENDER_OFFLOAD"] = "1" # For Laptops
+                    env["__VK_LAYER_NV_optimus"] = "NVIDIA_only"
+        
+            elif "amd" in gpu_info:
+                env["RADV_PERFTEST"] = "aco" # Uses the faster ACO compiler
+                env["mesa_glthread"] = "true"
+            
+            elif "intel" in gpu_info:
+                env["INTEL_DEBUG"] = "nocelt" # Reduces some overhead
+                env["mesa_glthread"] = "true"
+        except: pass
+
+        # 3. Final Command Construction
+        cmd = [self.wine] + (["mono", self.BepInEx_dll] if self.BepInEx_dll else []) + [self.exe_file]
+        return cmd, env
