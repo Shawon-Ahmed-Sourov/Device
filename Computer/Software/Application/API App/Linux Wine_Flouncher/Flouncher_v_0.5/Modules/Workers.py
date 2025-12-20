@@ -33,9 +33,15 @@ class Prefix(QThread):
         self.wine = "wine"
 
     def run(self):
-        ops = {1: self._create_base_prefix, 3: self._create_temp_prefix, 4: self._delete_temp_prefix}
-        if self.num in ops: self.done.emit(ops[self.num]())
-        else: (self.log.emit("❌ Invalid op."), self.done.emit(False))
+        ops = { # Map operations to functions and user-friendly messages
+            1: (self._create_base_prefix, "\n📂 Creating Base Wine Prefix..."),
+            3: (self._create_temp_prefix, "\n⚡ Creating Temporary Overlay Prefix... Please hold on."),
+            4: (self._delete_temp_prefix, "\n🗑️ Deleting Temporary Prefix... Please wait.")
+        }
+        if self.num in ops:
+            func, msg = ops[self.num]
+            self.log.emit(msg) ; self.done.emit(func())
+        else:    self.log.emit("❌ Invalid operation."); self.done.emit(False)
 
     def _create_base_prefix(self):
         try:
