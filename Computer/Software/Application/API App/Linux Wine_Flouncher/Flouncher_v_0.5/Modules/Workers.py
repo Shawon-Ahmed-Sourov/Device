@@ -1,4 +1,4 @@
-import os, pty, time, queue, shutil, threading, subprocess
+import os, pty, time, subprocess
 from PyQt5.QtCore import QThread, pyqtSignal
 
 # -------------------------
@@ -95,29 +95,59 @@ class Prefix(QThread):
 # -------------------------
 # Run Analyze Worker
 # -------------------------
+import os, pty, subprocess, select, fcntl, time, resource
+from PyQt5.QtCore import QThread, pyqtSignal
+
 class RunAnalyze(QThread):
     log, done = pyqtSignal(str), pyqtSignal(bool)
 
     def __init__(self, exe_path, exe_file, tprefix_path=None, BepInEx_dll=None):
         super().__init__()
-        self.wine, self.tprefix, self.dll, self.exe = "wine", tprefix_path, BepInEx_dll, exe_file
+        self.wine, self.proc = "wine", None 
+        self.tprefix_path, self.BepInEx_dll, self.exe_file = tprefix_path, BepInEx_dll, exe_file
 
     def run(self):
-        try:
-            cmd, env = self._build_command()
-            m_fd, s_fd = pty.openpty()
-            proc = subprocess.Popen(cmd, env=env, cwd=os.path.dirname(self.exe), stdin=s_fd, stdout=s_fd, stderr=s_fd, text=True)
-            os.close(s_fd)
 
-            while proc.poll() is None:
-                try: 
-                    line = os.read(m_fd, 1024).decode(errors="ignore")
-                    if line: [self.log.emit(l) for l in line.splitlines()]
-                except OSError: break
+        cmd, env = self._build_command()
+        m_fd, s_fd = None, None
+        try:
+            m_fd, s_fd = pty.openpty()
+            # Fast-path: Set non-blocking to keep UI responsive
+            fcntl.fcntl(m_fd, fcntl.F_SETFL, fcntl.fcntl(m_fd, fcntl.F_GETFL) | os.O_NONBLOCK)
+
+            self.proc = subprocess.Popen(
+                cmd, env=env, cwd=os.path.dirname(self.exe_file),
+                stdin=s_fd, stdout=s_fd, stderr=s_fd, preexec_fn=os.setsid, pass_fds=(s_fd,) )
+
+            os.close(s_fd); s_fd = None  # Close slave immediately
+            self._monitor_final(m_fd)    # High-speed log capture
+            self.done.emit(self.proc.wait() == 0) # wait() reaps the process so it doesn't stay as a 'zombie' in RAM
+
+        except Exception as e:    self.log.emit(f"❌ Error: {str(e)}"); self.done.emit(False)
+        finally:
+            for fd in (f for f in (s_fd, m_fd) if f is not None):
+                try: os.close(fd)
+                except: pass
+
+    def _monitor_final(self, m_fd):
+
+        acc, last_emit = [], time.time()
+        while self.proc.poll() is None or acc: # Loop while process runs OR data remains in buffer
+            r, _, _ = select.select([m_fd], [], [], 0.02)    
+            if r:
+                try:
+                    data = os.read(m_fd, 131072).decode(errors="ignore")
+                    if data: acc.append(data)
+                except (BlockingIOError, OSError):
+                  if self.proc.poll() is not None: break
+
+            now = time.time() # UI Batching: Emits every 200ms to keep gaming performance high
+            if acc and (now - last_emit > 0.2):
+                self.log.emit("".join(acc))
+                acc, last_emit = [], now
             
-            os.close(m_fd)
-            self.done.emit(proc.returncode == 0)
-        except Exception as e: self.log.emit(f"❌ Run error: {e}"); self.done.emit(False)
+            if self.proc.poll() is not None and not r: break # Instant exit if process is gone and no new data detected
+        if acc: self.log.emit("".join(acc))
 
     def _build_command(self):
         env = { **os.environ, "WINEPREFIX": self.tprefix_path or "",
