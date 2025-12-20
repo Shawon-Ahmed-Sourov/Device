@@ -1,60 +1,56 @@
+# -------------------------
+# Launch : 10s - DBar: 41s - FDisplay 1m10s - GA: 3m 30sec
+# LaggyFree : 1m 30s
+# -------------------------
+
 import os, pty, subprocess, select, fcntl, time, resource
 from PyQt5.QtCore import QThread, pyqtSignal
 
 class RunAnalyze(QThread):
-
     log, done = pyqtSignal(str), pyqtSignal(bool)
 
     def __init__(self, exe_path, exe_file, tprefix_path=None, BepInEx_dll=None):
         super().__init__()
-        self.wine, self.proc = "wine", None 
-        self.tprefix_path, self.BepInEx_dll, self.exe_file = tprefix_path, BepInEx_dll, exe_file
+        self.wine, self.proc, self.exe_file = "wine", None, exe_file
+        self.tprefix_path, self.BepInEx_dll = tprefix_path, BepInEx_dll
 
     def run(self):
-
-        self.log.emit("\n⚡ Launch has been Cliked.")
+        self.log.emit("\n⚡ Ultra-Performance Launch...")
         cmd, env = self._build_command()
         m_fd, s_fd = None, None
         try:
             m_fd, s_fd = pty.openpty()
-            # Fast-path: Set non-blocking to keep UI responsive
             fcntl.fcntl(m_fd, fcntl.F_SETFL, fcntl.fcntl(m_fd, fcntl.F_GETFL) | os.O_NONBLOCK)
+            self.proc = subprocess.Popen(cmd, env=env, cwd=os.path.dirname(self.exe_file),
+                    stdin=s_fd, stdout=s_fd, stderr=s_fd, start_new_session=True, pass_fds=(s_fd,))
+            os.close(s_fd); s_fd = None # Close slave in parent immediately
+            self._monitor(m_fd)
+            self.done.emit(self.proc.wait() == 0)
+        except Exception as e: self.log.emit(f"❌ Launch Error: {e}"); self.done.emit(False)
+        finally: [os.close(fd) for fd in (m_fd, s_fd) if fd is not None]
 
-            self.proc = subprocess.Popen(
-                cmd, env=env, cwd=os.path.dirname(self.exe_file),
-                stdin=s_fd, stdout=s_fd, stderr=s_fd, preexec_fn=os.setsid, pass_fds=(s_fd,) )
-
-            os.close(s_fd); s_fd = None  # Close slave immediately
-            self._monitor_final(m_fd)    # High-speed log capture
-            self.done.emit(self.proc.wait() == 0) # wait() reaps the process so it doesn't stay as a 'zombie' in RAM
-
-        except Exception as e:    self.log.emit(f"❌ Error: {str(e)}"); self.done.emit(False)
-        finally:
-            for fd in (f for f in (s_fd, m_fd) if f is not None):
-                try: os.close(fd)
-                except: pass
-
-    def _monitor_final(self, m_fd):
-        
+    def _monitor(self, m_fd):
         acc, last_emit = [], time.time()
-        while self.proc.poll() is None or acc: # Loop while process runs OR data remains in buffer
-            r, _, _ = select.select([m_fd], [], [], 0.02)    
+        while self.proc.poll() is None or acc:
+            r, _, _ = select.select([m_fd], [], [], 0.1) # 10Hz to save CPU
             if r:
                 try:
-                    data = os.read(m_fd, 131072).decode(errors="ignore")
+                    data = os.read(m_fd, 262144).decode(errors="replace")
                     if data: acc.append(data)
-                except (BlockingIOError, OSError):
-                  if self.proc.poll() is not None: break
-
-            now = time.time() # UI Batching: Emits every 200ms to keep gaming performance high
-            if acc and (now - last_emit > 0.2):
-                self.log.emit("".join(acc))
-                acc, last_emit = [], now
+                except (OSError, BlockingIOError):
+                    if self.proc.poll() is not None: break
             
-            if self.proc.poll() is not None and not r: break # Instant exit if process is gone and no new data detected
+            now = time.time()
+            if acc and (now - last_emit > 0.3 or len(acc) > 100):
+                self.log.emit("".join(acc)); acc, last_emit = [], now
+            
+            if self.proc.poll() is not None and not r: break
         if acc: self.log.emit("".join(acc))
-
+        
     def _build_command(self):
+
+        cores = os.cpu_count() or 4
+        mask = hex((1 << cores) - 1)
         env = { **os.environ, "WINEPREFIX": self.tprefix_path or "",
                 "PYTHONUNBUFFERED": "1", "WINEDEBUG": "-all",
 
@@ -66,34 +62,45 @@ class RunAnalyze(QThread):
                     # Rendering & Shaders
                 "vblank_mode": "0", # For Engine fastest assests-loading
                 "DXVK_ASYNC": "1",
-                "DXVK_STATE_CACHE":"1", 
-                "LIBGL_ALWAYS_SOFTWARE":"0", # not forcing graphics software rendering
-                "__GL_SHADER_DISK_CACHE": "1",
-                "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP": "1",
+                "DXVK_STATE_CACHE":"1",
+                "DXVK_GPL_ASYNCHRONOUS": "1", # Modern zero-stutter shader tech
+                "LIBGL_ALWAYS_SOFTWARE":"0", # Avoid Software Rendering
+                "__GL_SHADER_DISK_CACHE": "1", # Shader disk cache
+                "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP": "1", # Skip shader cleanup
+                "WINE_FULLSCREEN_FSR":"0", # Disable FSR (for smoother rendering)
 
                     # System & Library Tweaks
-                "STAGING_SHARED_MEMORY": "1",
-                "LD_BIND_NOW": "1",
-                "MALLOC_CHECK_": "0",
-
-                "WINE_FULLSCREEN_FSR":"0",
+                "STAGING_SHARED_MEMORY": "1", # Reduce memory usage
+                "LD_BIND_NOW": "1", # Memory binding optimizations
+                "MALLOC_CHECK_": "0", # Disable malloc checks
                 "WINE_STDOUT_LINE_BUFFERED": "1",
                 "WINEDLLOVERRIDES": "winhttp=n,b",
-                "MONO_GC_PARAMS": "nursery-size=64m,soft-heap-limit=512m"
+                "MONO_GC_PARAMS": "nursery-size=64m,soft-heap-limit=512m" # Memory management for Mono
             }
-
-        try:    # Sync Logic
-            import resource
-            if resource.getrlimit(resource.RLIMIT_NOFILE)[1] >= 65536:    env.update({ "WINEFSYNC": "1", "WINEESYNC": "1"})
+        try: # Sync Logic
+            if resource.getrlimit(resource.RLIMIT_NOFILE)[1] >= 524288: env.update({"WINEESYNC":"1","WINEFSYNC":"1"})
         except: pass
 
-        try:
+        try: # GPU Auto-Tuner
             gpu = subprocess.check_output(["lspci"], text=True).lower()
-            if "nvidia" in gpu :   env.update({"__GL_THREADED_OPTIMIZATIONS": "1", "NGX_ENABLE_DLSS_PRIMARY": "0"})
-            if any(x in gpu for x in ["amd", "intel"]) :   env["mesa_glthread"] = "true"
+            if "nvidia" in gpu: env.update({"__GL_THREADED_OPTIMIZATIONS": "1"})
+            if any(x in gpu for x in ["amd", "intel"]): env.update({"mesa_glthread": "true", "RADV_PERFTEST": "ngc"})
         except: pass
 
-        cmd = [ "taskset", "0xffffffff", self.wine ]
-        if self.BepInEx_dll : cmd += [ "mono", self.BepInEx_dll ]
-        cmd += [self.exe_file]
-        return cmd, env
+        cmd = ["taskset", mask, self.wine]
+        if self.BepInEx_dll: cmd += ["mono", self.BepInEx_dll]
+        return cmd + [self.exe_file], env
+
+    def stop(self):
+        """Forcefully kills process group and wipes the wineserver."""
+        if not self.proc: return
+        try:
+            import signal
+            os.killpg(os.getpgid(self.proc.pid), signal.SIGTERM)
+            # -k sends a kill signal to all processes in the prefix immediately
+            subprocess.call(["wineserver", "-k"], env={"WINEPREFIX": self.tprefix_path or ""})
+            self.log.emit("\n🛑 Emergency Stop: Process and Wine environment nuked.")
+        except Exception as e: self.log.emit(f"⚠️ Shutdown error: {e}")
+
+__________________
+
