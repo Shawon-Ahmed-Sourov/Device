@@ -163,6 +163,7 @@ class RunAnalyze(QThread):
                 "DXVK_ASYNC": "1",
                 "DXVK_STATE_CACHE":"1", 
                 "DXVK_STATE_CACHE_WRITETHROUGH": "1",
+                "LIBGL_ALWAYS_SOFTWARE":"0", # not forcing graphics software rendering
                 "__GL_SHADER_DISK_CACHE": "1",
                 "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP": "1",
 
@@ -171,6 +172,9 @@ class RunAnalyze(QThread):
                 "STAGING_SHARED_MEMORY": "1",
                 "LD_BIND_NOW": "1",
                 "MALLOC_CHECK_": "0",
+                "GALLIUM_HUD":"0", # For older hardware
+
+                "WINE_FULLSCREEN_FSR":"0",
                 "WINE_STDOUT_LINE_BUFFERED": "1",
                 "WINEDLLOVERRIDES": "winhttp=n,b",
                 "MONO_THREADS_PER_CPU": "100",
@@ -185,8 +189,8 @@ class RunAnalyze(QThread):
 
         try:
             gpu = subprocess.check_output(["lspci"], text=True).lower()
-            if "nvidia" in gpu:    env["__GL_THREADED_OPTIMIZATIONS"] = "1"
-            elif "amd" in gpu or "intel" in gpu:    env["mesa_glthread"] = "true"
+            if "nvidia" in gpu :   env.update({"__GL_THREADED_OPTIMIZATIONS": "1", "NGX_ENABLE_DLSS_PRIMARY": "0"})
+            if any(x in gpu for x in ["amd", "intel"]) :   env["mesa_glthread"] = "true"
         except: pass
 
         cmd = [ "taskset", "0xffffffff", self.wine ]
