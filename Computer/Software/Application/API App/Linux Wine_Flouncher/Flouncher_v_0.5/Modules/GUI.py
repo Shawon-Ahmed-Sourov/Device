@@ -109,7 +109,8 @@ class WineLauncher(QWidget):
         if not self.exe_file: return self.log.append("❌ Select an EXE first.")
         self.start_worker(RunAnalyze, exe_path=self.exe_path, exe_file=self.exe_file, tprefix_path=self.tprefix_path)
 
-    def on_resolution_changed(self, index): self.log.append(f"Res: {self.resolution.currentText()}")
+    def on_resolution_changed(self, index):
+        if index > 0: self.log.append(f"Res: {self.resolution.currentText()}")
     
     def on_checkbox_state_changed(self, state):
         self.log.append(f"{self.sender().text()}: {'Enabled' if state == Qt.Checked else 'Disabled'}")
