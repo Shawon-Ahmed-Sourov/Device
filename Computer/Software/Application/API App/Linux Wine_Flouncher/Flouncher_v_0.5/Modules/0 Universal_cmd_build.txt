@@ -1,4 +1,7 @@
     def _build_command(self):
+
+        cores = os.cpu_count() or 4
+        mask = hex((1 << cores) - 1)
         env = { **os.environ, "WINEPREFIX": self.tprefix_path or "",
                 "PYTHONUNBUFFERED": "1", "WINEDEBUG": "-all",
 
@@ -10,34 +13,32 @@
                     # Rendering & Shaders
                 "vblank_mode": "0", # For Engine fastest assests-loading
                 "DXVK_ASYNC": "1",
-                "DXVK_STATE_CACHE":"1", 
-                "LIBGL_ALWAYS_SOFTWARE":"0", # not forcing graphics software rendering
-                "__GL_SHADER_DISK_CACHE": "1",
-                "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP": "1",
+                "DXVK_STATE_CACHE":"1",
+                "DXVK_STATE_CACHE_WRITE_STRATEGY": "delayed", # Don't stutter the game to write cache files
+                "DXVK_GPL_ASYNCHRONOUS": "1", # Modern zero-stutter shader tech
+                "LIBGL_ALWAYS_SOFTWARE":"0", # Avoid Software Rendering
+                "__GL_SHADER_DISK_CACHE": "1", # Shader disk cache
+                "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP": "1", # Skip shader cleanup
+                "WINE_FULLSCREEN_FSR":"0", # Disable FSR (for smoother rendering)
 
                     # System & Library Tweaks
-                "STAGING_SHARED_MEMORY": "1",
-                "LD_BIND_NOW": "1",
-                "MALLOC_CHECK_": "0",
-
-                "WINE_FULLSCREEN_FSR":"0",
+                "STAGING_SHARED_MEMORY": "1", # Reduce memory usage
+                "LD_BIND_NOW": "1", # Memory binding optimizations
+                "MALLOC_CHECK_": "0", # Disable malloc checks
                 "WINE_STDOUT_LINE_BUFFERED": "1",
                 "WINEDLLOVERRIDES": "winhttp=n,b",
-                "MONO_GC_PARAMS": "nursery-size=64m,soft-heap-limit=512m"
+                "MONO_GC_PARAMS": "nursery-size=64m,soft-heap-limit=512m" # Memory management for Mono
             }
-
-        try:    # Sync Logic
-            import resource
-            if resource.getrlimit(resource.RLIMIT_NOFILE)[1] >= 65536:    env.update({ "WINEFSYNC": "1", "WINEESYNC": "1"})
+        try: # Sync Logic
+            if resource.getrlimit(resource.RLIMIT_NOFILE)[1] >= 524288: env.update({"WINEESYNC":"1","WINEFSYNC":"1"})
         except: pass
 
-        try:
+        try: # GPU Auto-Tuner
             gpu = subprocess.check_output(["lspci"], text=True).lower()
-            if "nvidia" in gpu :   env.update({"__GL_THREADED_OPTIMIZATIONS": "1", "NGX_ENABLE_DLSS_PRIMARY": "0"})
-            if any(x in gpu for x in ["amd", "intel"]) :   env["mesa_glthread"] = "true"
+            if "nvidia" in gpu: env.update({"__GL_THREADED_OPTIMIZATIONS": "1"})
+            if any(x in gpu for x in ["amd", "intel"]): env.update({"mesa_glthread": "true", "RADV_PERFTEST": "ngc"})
         except: pass
 
-        cmd = [ "taskset", "0xffffffff", self.wine ]
-        if self.BepInEx_dll : cmd += [ "mono", self.BepInEx_dll ]
-        cmd += [self.exe_file]
-        return cmd, env
+        cmd = ["taskset", mask, self.wine]
+        if self.BepInEx_dll: cmd += ["mono", self.BepInEx_dll]
+        return cmd + [self.exe_file], env
