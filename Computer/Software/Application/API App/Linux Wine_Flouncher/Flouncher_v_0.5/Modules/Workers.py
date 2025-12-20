@@ -92,12 +92,11 @@ class Prefix(QThread):
             self.log.emit("✅ Wine prefix ready."); return True
         except Exception as e: self.log.emit(f"❌ Init failed: {e}"); return False
 
-# -------------------------
-# Launch : 10s - DBar: 41s - FDisplay 1m10s - A: 3m 30sec
-# LaggyFree : 1m 30s
-# -------------------------
-
-import  select, fcntl, time, resource
+# ----------------------------------------------
+#  10s, DBar : 41s, FDisplay : 1m5s, GA : 3m 40s
+#  Smooth Escalation.
+#------------------------------------------------
+import os, pty, subprocess, select, fcntl, time, resource
 from PyQt5.QtCore import QThread, pyqtSignal
 
 class RunAnalyze(QThread):
@@ -109,37 +108,46 @@ class RunAnalyze(QThread):
         self.tprefix_path, self.BepInEx_dll = tprefix_path, BepInEx_dll
 
     def run(self):
-        self.log.emit("\n⚡ Ultra-Performance Launch...")
+        try:
+            mem = (os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')) / (1024**3)
+            if mem > 12:   self.buf, self.poll = 1048576, 0.05
+            elif mem >= 3: self.buf, self.poll = 524288, 0.1  # Your i3 Winner
+            else:          self.buf, self.poll = 65536, 0.15
+        except:            self.buf, self.poll = 65536, 0.15
+        self.log.emit("\n⚡ Scalable Launch: Preparing hardware...")
         cmd, env = self._build_command()
         m_fd, s_fd = None, None
         try:
             m_fd, s_fd = pty.openpty()
-            fcntl.fcntl(m_fd, fcntl.F_SETFL, fcntl.fcntl(m_fd, fcntl.F_GETFL) | os.O_NONBLOCK)
+            # Set non-blocking to prevent UI hangs
+            fcntl.fcntl(m_fd, fcntl.F_SETFL, fcntl.fcntl(m_fd, fcntl.F_GETFL) | os.O_NONBLOCK)            
+            
             self.proc = subprocess.Popen(cmd, env=env, cwd=os.path.dirname(self.exe_file),
-                    stdin=s_fd, stdout=s_fd, stderr=s_fd, start_new_session=True, pass_fds=(s_fd,))
-            os.close(s_fd); s_fd = None # Close slave in parent immediately
-            self._monitor(m_fd)
+                stdin=s_fd, stdout=s_fd, stderr=s_fd, start_new_session=True, pass_fds=(s_fd,))
+            
+            os.close(s_fd); s_fd = None
+            time.sleep(0.5) # Keep Loading by pollin Logs??
+            self._monitor(m_fd) # Start Monitoring Processing
             self.done.emit(self.proc.wait() == 0)
-        except Exception as e: self.log.emit(f"❌ Launch Error: {e}"); self.done.emit(False)
-        finally: [os.close(fd) for fd in (m_fd, s_fd) if fd is not None]
+        except Exception as e:    self.log.emit(f"❌ Error: {e}"); self.done.emit(False)
+        finally:     [os.close(fd) for fd in (m_fd, s_fd) if fd is not None]
 
     def _monitor(self, m_fd):
         acc, last_emit = [], time.time()
-        while self.proc.poll() is None or acc:
-            r, _, _ = select.select([m_fd], [], [], 0.1) # 10Hz to save CPU
+        while self.proc.poll() is None or acc:    # Uses self.poll calculated in run()
+            r, _, _ = select.select([m_fd], [], [], self.poll)
             if r:
-                try:
-                    data = os.read(m_fd, 262144).decode(errors="replace")
+                try:    # Uses self.buf calculated in run()
+                    data = os.read(m_fd, self.buf).decode(errors="replace")
                     if data: acc.append(data)
                 except (OSError, BlockingIOError):
                     if self.proc.poll() is not None: break
-            
-            now = time.time()
-            if acc and (now - last_emit > 0.3 or len(acc) > 100):
-                self.log.emit("".join(acc)); acc, last_emit = [], now
+
+            now = time.time() # 0.5s Flush: Minimum GPU impact for Integrated Graphics
+            if acc and (now - last_emit > 0.5 or len(acc) > 100): self.log.emit("".join(acc)); acc, last_emit = [], now
             if self.proc.poll() is not None and not r: break
         if acc: self.log.emit("".join(acc))
-        
+
     def _build_command(self):
 
         cores = os.cpu_count() or 4
@@ -156,6 +164,7 @@ class RunAnalyze(QThread):
                 "vblank_mode": "0", # For Engine fastest assests-loading
                 "DXVK_ASYNC": "1",
                 "DXVK_STATE_CACHE":"1",
+                "DXVK_STATE_CACHE_WRITE_STRATEGY": "delayed", # Don't stutter the game to write cache files
                 "DXVK_GPL_ASYNCHRONOUS": "1", # Modern zero-stutter shader tech
                 "LIBGL_ALWAYS_SOFTWARE":"0", # Avoid Software Rendering
                 "__GL_SHADER_DISK_CACHE": "1", # Shader disk cache
@@ -185,19 +194,13 @@ class RunAnalyze(QThread):
         return cmd + [self.exe_file], env
 
     def stop(self):
-        """Forcefully kills process group and wipes the wineserver."""
         if not self.proc: return
         try:
             import signal
-            os.killpg(os.getpgid(self.proc.pid), signal.SIGTERM)
-            # -k sends a kill signal to all processes in the prefix immediately
+            if self.proc.poll() is None: os.killpg(os.getpgid(self.proc.pid), signal.SIGTERM)
             subprocess.call(["wineserver", "-k"], env={"WINEPREFIX": self.tprefix_path or ""})
-            self.log.emit("\n🛑 Emergency Stop: Process and Wine environment nuked.")
-        except Exception as e: self.log.emit(f"⚠️ Shutdown error: {e}")
-
-__________________
-
-
+            self.log.emit("\n🛑 Emergency Stop: Environment cleaned.")
+        except: pass
 
 # -------------------------
 # Winetricks Launcher
