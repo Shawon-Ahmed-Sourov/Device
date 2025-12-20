@@ -171,7 +171,6 @@ class RunAnalyze(QThread):
                 "STAGING_SHARED_MEMORY": "1",
                 "LD_BIND_NOW": "1",
                 "MALLOC_CHECK_": "0",
-                "GALLIUM_HUD":"0", # For older hardware
 
                 "WINE_FULLSCREEN_FSR":"0",
                 "WINE_STDOUT_LINE_BUFFERED": "1",
