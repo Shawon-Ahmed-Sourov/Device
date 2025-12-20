@@ -2,6 +2,7 @@ import os, pty, subprocess, select, fcntl, time, resource
 from PyQt5.QtCore import QThread, pyqtSignal
 
 class RunAnalyze(QThread):
+
     log, done = pyqtSignal(str), pyqtSignal(bool)
 
     def __init__(self, exe_path, exe_file, tprefix_path=None, BepInEx_dll=None):
@@ -74,7 +75,6 @@ class RunAnalyze(QThread):
                 "STAGING_SHARED_MEMORY": "1",
                 "LD_BIND_NOW": "1",
                 "MALLOC_CHECK_": "0",
-                "GALLIUM_HUD":"0", # For older hardware
 
                 "WINE_FULLSCREEN_FSR":"0",
                 "WINE_STDOUT_LINE_BUFFERED": "1",
