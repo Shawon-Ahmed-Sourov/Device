@@ -95,7 +95,7 @@ class Prefix(QThread):
 # -------------------------
 # Run Analyze Worker
 # -------------------------
-import os, pty, subprocess, select, fcntl, time, resource
+import os, pty, time, subprocess, select, fcntl, resource
 from PyQt5.QtCore import QThread, pyqtSignal
 
 class RunAnalyze(QThread):
@@ -108,6 +108,7 @@ class RunAnalyze(QThread):
 
     def run(self):
 
+        self.log.emit("\n⚡ Launch has been Cliked.")
         cmd, env = self._build_command()
         m_fd, s_fd = None, None
         try:
@@ -130,7 +131,7 @@ class RunAnalyze(QThread):
                 except: pass
 
     def _monitor_final(self, m_fd):
-
+        
         acc, last_emit = [], time.time()
         while self.proc.poll() is None or acc: # Loop while process runs OR data remains in buffer
             r, _, _ = select.select([m_fd], [], [], 0.02)    
@@ -162,13 +163,11 @@ class RunAnalyze(QThread):
                 "vblank_mode": "0", # For Engine fastest assests-loading
                 "DXVK_ASYNC": "1",
                 "DXVK_STATE_CACHE":"1", 
-                "DXVK_STATE_CACHE_WRITETHROUGH": "1",
                 "LIBGL_ALWAYS_SOFTWARE":"0", # not forcing graphics software rendering
                 "__GL_SHADER_DISK_CACHE": "1",
                 "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP": "1",
 
                     # System & Library Tweaks
-                "STAGING_WRITECOPY": "1",
                 "STAGING_SHARED_MEMORY": "1",
                 "LD_BIND_NOW": "1",
                 "MALLOC_CHECK_": "0",
@@ -177,14 +176,12 @@ class RunAnalyze(QThread):
                 "WINE_FULLSCREEN_FSR":"0",
                 "WINE_STDOUT_LINE_BUFFERED": "1",
                 "WINEDLLOVERRIDES": "winhttp=n,b",
-                "MONO_THREADS_PER_CPU": "100",
                 "MONO_GC_PARAMS": "nursery-size=64m,soft-heap-limit=512m"
             }
 
         try:    # Sync Logic
             import resource
-            if resource.getrlimit(resource.RLIMIT_NOFILE)[1] >= 65536:
-                env.update({ "WINE_DISABLE_FAST_SYNC":"0","WINEESYNC": "1", "WINEFSYNC": "1"})
+            if resource.getrlimit(resource.RLIMIT_NOFILE)[1] >= 65536:    env.update({ "WINEFSYNC": "1", "WINEESYNC": "1"})
         except: pass
 
         try:
