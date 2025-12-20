@@ -162,6 +162,7 @@ class RunAnalyze(QThread):
 
                     # Rendering & Shaders
                 "vblank_mode": "0", # For Engine fastest assests-loading
+                "DXVK_HUD": "fps",
                 "DXVK_ASYNC": "1",
                 "DXVK_STATE_CACHE":"1",
                 "DXVK_STATE_CACHE_WRITE_STRATEGY": "delayed", # Don't stutter the game to write cache files
@@ -175,7 +176,8 @@ class RunAnalyze(QThread):
                 "STAGING_SHARED_MEMORY": "1", # Reduce memory usage
                 "LD_BIND_NOW": "1", # Memory binding optimizations
                 "MALLOC_CHECK_": "0", # Disable malloc checks
-                "WINE_STDOUT_LINE_BUFFERED": "1",
+                "WINE_STDOUT_LINE_BUFFERED": "0",
+                "WINE_STDERR_LINE_BUFFERED": "0",
                 "WINEDLLOVERRIDES": "winhttp=n,b",
                 "MONO_GC_PARAMS": "nursery-size=64m,soft-heap-limit=512m" # Memory management for Mono
             }
