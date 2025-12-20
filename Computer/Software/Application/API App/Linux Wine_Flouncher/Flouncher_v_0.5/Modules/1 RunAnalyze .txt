@@ -1,7 +1,7 @@
 # ----------------------------------------------
 #  10s, DBar : 41s, FDisplay : 1m5s, GA : 3m 40s
 #  Smooth Escalation.
-------------------------------------------------
+# ------------------------------------------------
 import os, pty, subprocess, select, fcntl, time, resource
 from PyQt5.QtCore import QThread, pyqtSignal
 
