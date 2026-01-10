@@ -72,7 +72,7 @@ class WineLauncher(QWidget):
         """Generic helper to handle worker initialization and cleanup"""
         self.worker_thread = worker_class(**kwargs)
         self.worker_thread.log.connect(self.log.append)
-        self.worker_thread.done.connect(lambda success: self.log.append("✅ Success!" if success else "❌ Failed."))
+        self.worker_thread.done.connect(lambda code: self.log.append("✅ Success!" if code == 0 else f"❌ Exited with code: {code}"))
         self.worker_thread.start()
 
     def sel_bprefix(self):
