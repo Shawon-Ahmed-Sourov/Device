@@ -13,9 +13,9 @@ class Prefix(QThread):
     def run(self):
         ops = {
             1: (self._create_base_prefix, "\n📂 Creating Base Wine Prefix..."),
-
-            3: (self._create_temp_prefix, "\n⚡ Creating Temporary Overlay Prefix... Please hold on."),
-            4: (self._delete_temp_prefix, "\n🗑️ Deleting Temporary Prefix... Please wait.")
+            2: (self._delete_prefix, "\n🗑️ Deleting BasePrefix."),
+            3: (self._create_temp_prefix, "\n⚡ Creating Temporary NOverlay Prefix... Please hold on."),
+            4: (self._delete_prefix, "\n🗑️ Deleting TemPrefix."),
         }
         if self.num in ops:
             func, msg = ops[self.num]
@@ -44,21 +44,26 @@ class Prefix(QThread):
 
 
 
-    def _delete_temp_prefix(self):
+    def _delete_prefix(self):
 
-        ovl = os.path.join(self.exe_path, ".wine_temp_noverlay")
-        mrg = os.path.join(ovl, "merged")
-        if not os.path.exists(ovl): self.log.emit("❌ No Directory for Removing."); return True
+        if self.num == 2:  target = str(Path(__file__).parent.resolve() / "BasePrefix")
+        else:              target = os.path.join(self.exe_path, ".wine_temp_noverlay")
 
-        if subprocess.run(["mountpoint", "-q", mrg]).returncode != 0:
-            subprocess.run(["pkexec", "rm", "-rf", ovl], capture_output=True)
+        if not target or not os.path.exists(target):  self.log.emit("❌ No Directory found.") ; return True
+        
+        mrg = os.path.join(target, "merged")
+        if os.path.exists(mrg) and subprocess.run(["mountpoint", "-q", mrg]).returncode == 0:
+            self.log.emit(f"🔗 Unmounting & Deleting: {target}")
+            cmd = f"fusermount -u '{mrg}' || umount -l '{mrg}' || umount '{mrg}'; rm -rf '{target}'"
         else:
-            cmd = f"fusermount -u '{mrg}' || umount -l '{mrg}' || umount '{mrg}'; rm -rf '{ovl}'"
-            subprocess.run(["pkexec", "bash", "-c", cmd], capture_output=True)
+            self.log.emit(f"🗑️ Deleting: {target}")
+            cmd = f"rm -rf '{target}'"
 
-        success = not os.path.exists(ovl)
-        self.log.emit("✅ Removed" if success else "❌ Failed")
+        subprocess.run(["pkexec", "bash", "-c", cmd], capture_output=True)
+        success = not os.path.exists(target)
+        self.log.emit("✅ Removed successfully." if success else "❌ Failed to remove folder.")
         return success
+
 
 
     def _create_temp_prefix(self):
