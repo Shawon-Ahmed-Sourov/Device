@@ -74,18 +74,21 @@ class Prefix(QThread):
             return True
         except Exception as e:    self.log.emit(f"❌ Error: {e}"); return False
 
-    
+
+
     def _delete_temp_prefix(self):
 
         ovl = os.path.join(self.exe_path, ".wine_temp_noverlay")
         mrg = os.path.join(ovl, "merged")
         
         if not os.path.exists(ovl): return True
-        if not self._is_mounted(mrg):    return self._remove_path(ovl)
-        
-        cmd = f"fusermount -u '{mrg}' || pkexec umount -l '{mrg}' || pkexec umount '{mrg}'; [ -d '{ovl}' ] && pkexec rm -rf '{ovl}'"
-        self._run_command(["pkexec", "bash", "-c", cmd])
-        
+
+        if subprocess.run(["mountpoint", "-q", mrg]).returncode != 0:
+            subprocess.run(["pkexec", "rm", "-rf", ovl], capture_output=True)
+        else:
+            cmd = f"fusermount -u '{mrg}' || umount -l '{mrg}' || umount '{mrg}'; rm -rf '{ovl}'"
+            subprocess.run(["pkexec", "bash", "-c", cmd], capture_output=True)
+
         success = not os.path.exists(ovl)
         self.log.emit("✅ Removed" if success else "❌ Failed")
         return success
