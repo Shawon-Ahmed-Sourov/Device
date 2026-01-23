@@ -92,23 +92,33 @@ class Prefix(QThread):
         self.log.emit("✅ Removed" if success else "❌ Failed")
         return success
 
+    
     def _create_temp_prefix(self):
 
-        if not (self.exe_path and self.bprefix_path):  self.log.emit("❌ Select EXE and BasePrefix."); return False 
-
+        if not (self.exe_path and self.bprefix_path):  self.log.emit("❌ Select EXE & B.Prefix."); return False 
         ovl = os.path.join(self.exe_path, ".wine_temp_noverlay")
         dirs = {k: os.path.join(ovl, k) for k in ["upper", "work", "merged"]}
-        if not self._ensure_dirs_exist(dirs.values()): return False
 
-        fs, opts = self._detect_fs(self.exe_path), f"lowerdir={self.bprefix_path},upperdir={dirs['upper']},workdir={dirs['work']}"
+        try : 
+            for d in dirs.values(): os.makedirs(d, exist_ok=True)
+        except Exception as e: self.log.emit(f"❌ Failed to create directories: {e}"); return False
+        try:
+            df_proc = subprocess.run( [ "df", "-T", self.exe_path], capture_output=True, text=True, check=True )
+            fs = df_proc.stdout.splitlines()[1].split()[1].lower()
+        except Exception : fs = "unknown"
+
+        opts = f"lowerdir={self.bprefix_path},upperdir={dirs['upper']},workdir={dirs['work']}"
         m_map = {
-            'ext4': ["pkexec", "mount", "-t", "overlay", "overlay", "-o", opts, dirs['merged']],
-            'xfs':  ["pkexec", "mount", "-t", "overlay", "overlay", "-o", opts, dirs['merged']],
+            'ext4':    ["pkexec", "mount", "-t", "overlay", "overlay", "-o", opts, dirs['merged']],
+            'xfs':     ["pkexec", "mount", "-t", "overlay", "overlay", "-o", opts, dirs['merged']],
             'fuseblk': ["fuse-overlayfs", "-o", opts, dirs['merged']]
         }
-        
         cmd = m_map.get(fs)
-        if not cmd or self._run_command(cmd).returncode != 0: return False
+        if not cmd : self.log.emit(f"❌ Unsupported filesystem: {fs}") ; return False
+            
+        try :    subprocess.run(cmd, check=True, capture_output=True, text=True)
+        except Exception as e: self.log.emit(f"❌ Mount failed: {e}") ; return False
+
         return self._init_wine_temp_prefix(dirs["merged"])
 
 
