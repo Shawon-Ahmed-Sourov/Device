@@ -80,7 +80,6 @@ class Prefix(QThread):
 
         ovl = os.path.join(self.exe_path, ".wine_temp_noverlay")
         mrg = os.path.join(ovl, "merged")
-        
         if not os.path.exists(ovl): return True
 
         if subprocess.run(["mountpoint", "-q", mrg]).returncode != 0:
