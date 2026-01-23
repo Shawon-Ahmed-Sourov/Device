@@ -56,8 +56,25 @@ class Prefix(QThread):
         else:    self.log.emit("❌ Invalid operation.") ;  self.done.emit(False)
 
 
-    def _create_base_prefix(self):     return True
+    def _create_base_prefix(self):
+        try:
+            from pathlib import Path
+            prefix_dir = Path(__file__).parent.resolve() / "BasePrefix"
+            self.log.emit(f"📂 Creating Wine Base-Prefix at: \n{prefix_dir}")
 
+            os.makedirs(prefix_dir, exist_ok=True)
+            
+            env = { **os.environ, "WINEPREFIX": str(prefix_dir), "WINEARCH": "win64", "WINEDEBUG": "-all" }
+            cmd = "wineboot -i && wine reg add 'HKCU\\Software\\Wine\\Config' /v Version /d win10 /f"
+        
+            self.log.emit(f"🚀 Running: \n{cmd}")
+            subprocess.run(cmd, env=env, shell=True, check=True, capture_output=True )
+        
+            self.log.emit(f"✅ BasePrefix is Constructed.")
+            return True
+        except Exception as e:    self.log.emit(f"❌ Error: {e}"); return False
+
+    
     def _delete_temp_prefix(self):
 
         ovl = os.path.join(self.exe_path, ".wine_temp_noverlay")
