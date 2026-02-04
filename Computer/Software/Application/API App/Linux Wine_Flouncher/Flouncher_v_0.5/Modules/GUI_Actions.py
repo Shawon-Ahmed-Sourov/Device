@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QWidget, QFileDialog
 from PyQt5.QtCore import Qt
 
 # Subsystem Imports
-from GUI_UI_Components import UIBuilder
+from GUI_UI import UIBuilder
 
 from GUI_W_FileSystem import Prefix
 from GUI_W_Runner1 import RunAnalyze
