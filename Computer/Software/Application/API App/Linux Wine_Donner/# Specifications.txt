@@ -1,0 +1,19 @@
+* Software Name : Flouncher
+* Purpose: Raw Wine-Management-GUI ( ease of use, responsive )
+* shell cmd : /isolated-PREFIX-Dir  ( Uni+STBL)-env_flags  wine mono  /Path of mods.dll  /G-Soft-Path*.exe
+
+* GUI Looks :
+-------------------------------------------------------------------
+[Mod BasePrefix ] [  Select BasePrefix ] [ Select Executable.exe ] |
+[Mod Temp-Prefix] [ Resolution-Options ] [ Launch Executable.exe ] |
+-------------------------------------------------------------------
+|                                                                  |
+|                                                      [ Vulkan  ] |
+|   [ The LogsBox ]                                    [ DXVK    ] |
+|                                                      [ VKD3D   ] |
+|                                                      [ Gamemode] |
+-------------------------------------------------------------------
+here :
+> [ Buttons ] : Select( BasePrefix, Executable, Launch Executable.exe)
+> [ Drop-Down-Menu ] : Mod( Base-Prefix, Temp-Prefix, Resolution-Options )
+> [ Check Boxs ] : Wine, Vulkan, DXVK, VKD3D, Gamemode
