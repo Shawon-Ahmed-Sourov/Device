@@ -1,0 +1,19 @@
+* Modules files are for Developer / Maintainer
+* user may use One single file of python named "Flouncher_version.py"
+
+# Required Dependencies :
+> Wine Api : https://gitlab.winehq.org/wine/wine/-/wikis/Download ; winetricks( to install dlls), 
+> Python3, PyQt5
+
+
+# Now Lets see How you can run *exe in linux : 
+
+1. BasePrefix Option DropDown Menu -> Create BasePrefix( Right Now you might install different dlls by terminal as your specific software requires )
+    ? how ? to install dlls :
+    > open Terminal where the BasePrefix Located
+    > $ WINEPREFIX=~/BasePrefix winetricks vcrun2012 dotnet40 dxdiag others-dlls-name
+
+2. Select BasePrefix Option -> Select The BasePrefix you've created & updated
+3. Select G-Soft.exe Button : Select Windows Native Executable File
+5. Temp Prefix Options ->  Create
+4. Click Launch and Analyze
